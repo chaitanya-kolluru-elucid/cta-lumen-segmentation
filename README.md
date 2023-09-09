@@ -14,7 +14,7 @@ OLVZ:
 FFR Pilot 2.0\<CAP_Exam_Data_Group001A or 001B or 004A or 005>
 
 HolyCross:
-FFR Pilot 2.0\<CAP_Group001>
+FFR Pilot 2.0\<CAP Exam_Data_Group001 or 002>
 
 MIE University:
 FFR Pilot 2.0\<CAP_Exam_Data_Group000>
