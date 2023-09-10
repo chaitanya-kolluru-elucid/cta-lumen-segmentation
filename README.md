@@ -2,7 +2,7 @@
 Lumen segmentation methods using Elucid in-house CTA datasets.
 
 # Dataset preparation
-Using datasets from MUSC, OLVZ and HolyCross institutions for model training, validation and in-domain testing.
+Using datasets from MUSC, OLVZ and HolyCross institutions for model training, validation and in-domain testing.  
 Using datasets from MIE University for out-of-domain testing.
 
 Datasets are at /inst/staging/AppData/Institutions/
