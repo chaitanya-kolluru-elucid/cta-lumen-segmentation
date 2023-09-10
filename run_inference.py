@@ -92,6 +92,24 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
             pred_filename = filename.split('.')[0] + '_seg_out.nii.gz'
             nib.save(nifti_volume, test_preds_dir + pred_filename)
 
+#def calculate_metrics(preds_dir, labels_dir):
+
+    # cm = torch.zeros(num_classes,num_classes) 
+#         # Confusion matrix
+#         # y_true = torch.squeeze(val_labels[0]).detach()
+#         # y_true = y_true.reshape(num_classes, -1)
+#         # y_true = np.argmax(y_true, axis = 0)
+
+#         # y_pred = torch.squeeze(val_outputs[0]).detach()
+#         # y_pred = y_pred.reshape(num_classes, -1)
+#         # y_pred = np.argmax(y_pred, axis = 0)
+
+#         # cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
+
+#                             # Hausdorff distance
+#         # hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
+
+
 
 if __name__ == '__main__':
 
@@ -112,22 +130,6 @@ if __name__ == '__main__':
     run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
 
     # Calculate metrics (Dice, ASD, confusion matrix)
-    calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir)
-
-
-# cm = torch.zeros(num_classes,num_classes) 
-#         # Confusion matrix
-#         # y_true = torch.squeeze(val_labels[0]).detach()
-#         # y_true = y_true.reshape(num_classes, -1)
-#         # y_true = np.argmax(y_true, axis = 0)
-
-#         # y_pred = torch.squeeze(val_outputs[0]).detach()
-#         # y_pred = y_pred.reshape(num_classes, -1)
-#         # y_pred = np.argmax(y_pred, axis = 0)
-
-#         # cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
-
-#                             # Hausdorff distance
-#         # hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
+    #calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir)
 
 
