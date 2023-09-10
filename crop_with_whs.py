@@ -140,28 +140,33 @@ def generate_crop_images(nifti_image_filelist, annotation_filelist = None, whs_p
         crop_annotation_save_path = None
 
         if annotation_filelist is not None:
+            parent_dir = annotation_filelist[k].split('/')[-2]
             annotation_image_path = annotation_filelist[k]
             folder_to_save_annotations = os.path.abspath(os.path.join(os.path.dirname(annotation_filelist[k]), '..', 'crop_' + parent_dir))
+
+            if not os.path.exists(folder_to_save_annotations):
+                os.makedirs(folder_to_save_annotations)
+
             annotation_stack_name = annotation_filelist[k].split('/')[-1]
 
             crop_annotation_save_path = os.path.join(folder_to_save_annotations, annotation_stack_name)
 
-        crop_image(nifti_image_filelist[k], whs_paths[k], crop_image_save_path, annotation_image_path = annotation_image_path, crop_annotation_save_path = crop_annotation_save_path )
+        crop_image(nifti_image_filelist[k], whs_paths[k], crop_image_save_path, annotation_filelist[k], crop_annotation_save_path = crop_annotation_save_path )
 
 if __name__ == '__main__':
     
     # Provide folders for raw CTA images (as .nii.gz) and location to save whole heart segmentations
     nifti_image_dir = './data/imagesTr'
     annotations_dir = './data/labelsTr'
-    whs_pred_dir = './data/whsPreds/imagesTr'
+    whs_pred_dir = './whsPreds/imagesTr'
 
     # MONAI - whole body CT segmentation model from Zoo
     whs_segmentation_bundle_path = './monai_whole_body_segmentation/'
     run_pred_monai(model_folder=whs_segmentation_bundle_path, input_dir = nifti_image_dir, output_dir=whs_pred_dir)
 
-    nifti_image_filelist = sorted(glob.glob(nifti_image_dir + '*.nii.gz'))
-    annotations_filelist = sorted(glob.glob(annotations_dir + '*.nii.gz'))
-    whs_paths = sorted(glob.glob(whs_pred_dir + '*.nii.gz'))
+    nifti_image_filelist = sorted(glob.glob(os.path.join(nifti_image_dir , '*.nii.gz')))
+    annotations_filelist = sorted(glob.glob(os.path.join(annotations_dir , '*.nii.gz')))
+    whs_paths = sorted(glob.glob(os.path.join(whs_pred_dir, '*.nii.gz')))
 
     # Crop images based on the segmentation result
     generate_crop_images(nifti_image_filelist, annotation_filelist = annotations_filelist, whs_paths = whs_paths)
