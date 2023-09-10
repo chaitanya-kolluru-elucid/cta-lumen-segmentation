@@ -3,10 +3,10 @@ Lumen segmentation methods using Elucid in-house CTA datasets.
 
 # Dataset preparation
 Using datasets from MUSC, OLVZ and HolyCross institutions for model training and validation.  
-Using datasets from MIE University for held-out testing.
+Using datasets from MIE University for held-out testing.  
 Both are single level branching datasets.
 
-To test on multi level branching dataset, we use the ASOCA dataset.
+To test on multi level branching dataset, we use the ASOCA dataset.  
 Datasets are at /inst/staging/AppData/Institutions/
 
 MUSC:
