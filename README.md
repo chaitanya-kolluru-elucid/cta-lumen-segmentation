@@ -5,16 +5,27 @@ Lumen segmentation methods using Elucid in-house CTA datasets.
 Using datasets from MUSC, OLVZ and HolyCross institutions for model training, validation and in-domain testing.
 Using datasets from MIE University for out-of-domain testing.
 
-Datasets are on /inst/staging/AppData/Institutions/<MUSC, OLVZ, HolyCross, MIE University>
+Datasets are at /inst/staging/AppData/Institutions/
 
 MUSC:
-FFR Pilot 2.0\<CAP_Exam_Data_Group001 or 002 or 003>
+FFR Pilot 2.0\
+- CAP Exam Data_Group001
+- CAP Exam Data_Group002
+- CAP Exam Data_Group003
 
 OLVZ:
-FFR Pilot 2.0\<CAP_Exam_Data_Group001A or 001B or 004A or 005>
+FFR Pilot 2.0\
+- CAP Exam Data_Group001A
+- CAP Exam Data_Group001B
+- CAP Exam Data_Group004A
+- CAP Exam Data_Group005
+ 
+Holy Cross:
+FFR Pilot 2.0\
+ - CAP Exam Data_Group001
+ - CAP Exam Data_Group002
 
-HolyCross:
-FFR Pilot 2.0\<CAP Exam_Data_Group001 or 002>
+MIE University
+FFR Pilot 2.0\
+- CAP Exam Data_Group000
 
-MIE University:
-FFR Pilot 2.0\<CAP_Exam_Data_Group000>
