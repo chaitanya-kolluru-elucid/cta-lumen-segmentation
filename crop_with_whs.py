@@ -160,8 +160,8 @@ if __name__ == '__main__':
     run_pred_monai(model_folder=whs_segmentation_bundle_path, input_dir = nifti_image_dir, output_dir=whs_pred_dir)
 
     nifti_image_filelist = sorted(glob.glob(nifti_image_dir + '*.nii.gz'))
-    whs_paths = sorted(glob.glob(whs_pred_dir + '*.nii.gz'))
     annotations_filelist = sorted(glob.glob(annotations_dir + '*.nii.gz'))
+    whs_paths = sorted(glob.glob(whs_pred_dir + '*.nii.gz'))
 
     # Crop images based on the segmentation result
     generate_crop_images(nifti_image_filelist, annotation_filelist = annotations_filelist, whs_paths = whs_paths)

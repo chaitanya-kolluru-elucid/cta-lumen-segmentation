@@ -61,13 +61,13 @@ print_config()
 
 def training_run(args, results_dir):
 
-    num_classes = 3
+    num_classes = args.num_classes
 
     # Get list of training images
     images = sorted(glob.glob(os.path.join(args.data_dir, args.images_dir, "*.nii.gz")))
 
     # Get list of training labels
-    labels = sorted(glob.glob(os.path.join(args.data_dir, args.labels_dir, "*-lumen-wall-mask.nii.gz")))
+    labels = sorted(glob.glob(os.path.join(args.data_dir, args.labels_dir, '*' + args.mask_sufix + '.nii.gz')))
 
     # Set random seed and shuffle image list
     random.seed(3)
@@ -91,10 +91,10 @@ def training_run(args, results_dir):
     # Get training metadata, used for image normalization, save to pickle files, useful for inference
     median_pixel_spacing, fg_intensity_metrics = metadata_calculator.get_training_metadata(images, labels)
     
-    with open(os.path.join(results_dir, 'median_pixel_spacing.pkl')) as f:
+    with open(os.path.join(results_dir, 'median_pixel_spacing.pkl'), 'wb') as f:
         pickle.dump(median_pixel_spacing, f)
 
-    with open(os.path.join(results_dir, 'fg_intensity_metrics')) as f:
+    with open(os.path.join(results_dir, 'fg_intensity_metrics'), 'wb') as f:
         pickle.dump(fg_intensity_metrics, f)
 
     set_determinism(seed=0)
@@ -188,8 +188,11 @@ def training_run(args, results_dir):
         model = AttentionUnet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=[16, 32, 64, 128, 256], strides=(2, 2, 2, 2, 2), dropout=0.0).to(device)
 
     else:
-        print('Model architecture not found, ensure that the architecture is one of UNet, SegResNet or AttentionUnet. Exiting.')
+        print('Model architecture not found, ensure that the architecture is either UNet, SegResNet or AttentionUnet. Exiting.')
         return
+    
+    # Save the model architecture to the results folder
+    torch.save(model, os.path.join(results_dir, 'model_architecture.pt'))
     
     # Get loss function
     if args.loss == 'DiceCE':
@@ -292,7 +295,7 @@ def training_run(args, results_dir):
                 if val_metric > best_metric:
                     best_metric = val_metric
                     best_metric_epoch = epoch + 1
-                    torch.save(model.state_dict(), os.path.join(results_dir, "best_metric_model.pth"))
+                    torch.save(model.state_dict(), os.path.join(results_dir, "best_val_metric_model.pt"))
                     print("saved new best metric model")
 
                 print(f"current epoch: {epoch + 1} \ncurrent val mean loss: {val_loss:.4f} \ncurrent val mean dice: {val_metric:.4f} \nbest val mean dice: {best_metric:.4f} at epoch: {best_metric_epoch}")
@@ -335,6 +338,8 @@ if __name__ == '__main__':
     parser.add_argument('-images_dir', type=str, default='crop_imagesTr', help='Directory name containing training/val images')
     parser.add_argument('-labels_dir', type=str, default='crop_labelsTr', help='Directory name containing training/val labels')
     parser.add_argument('-train_roi_size', type=tuple, default=(96, 96, 96), help='Size of ROI used for training')
+    parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
+    parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
 
     args = parser.parse_args()
 
@@ -347,6 +352,10 @@ if __name__ == '__main__':
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=True)
+
+    # Save training args to the results folder
+    with open(os.path.join(results_dir, 'training_args.pkl'), 'wb') as f:
+        pickle.dump(args, f)
 
     # Start a training run
     training_run(args, results_dir)
