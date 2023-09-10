@@ -124,8 +124,8 @@ def training_run(args, results_dir):
                 label_key="label",
                 spatial_size=args.train_roi_size,
                 num_classes=num_classes,
-                ratios=[0, 10],
-                num_samples=10, 
+                ratios=args.crop_ratios,
+                num_samples=int(np.sum(args.crop_ratios)), 
             ),
         ]
     )
@@ -163,7 +163,7 @@ def training_run(args, results_dir):
     plt.imshow(image[:, :, 30], cmap="gray")
     plt.subplot(1, 2, 2)
     plt.title("label")
-    plt.imshow(label[:, :, 30])
+    plt.imshow(label[:, :, 150])
 
     plt.savefig(os.path.join(results_dir, 'Validation data slice check.png'))
 
@@ -178,7 +178,7 @@ def training_run(args, results_dir):
 
     # Get network architecture
     if args.architecture == 'UNet':
-        model = UNet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=(16, 32, 64, 128), strides=(2, 2, 2), num_res_units=2, norm=Norm.BATCH, dropout=0.2)
+        model = UNet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=(16, 32, 64, 128), strides=(2, 2, 2), num_res_units=2, norm=Norm.BATCH, dropout=0.2).to(device)
 
     elif args.architecture == 'SegResNet':
         model = SegResNet(spatial_dims=3, in_channels=1, out_channels=num_classes, norm=Norm.BATCH).to(device)
@@ -195,12 +195,10 @@ def training_run(args, results_dir):
     
     # Get loss function
     if args.loss == 'DiceCE':
-        ce_weights = np.array([1, 10, 10, 10, 10])
-        loss_function = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(ce_weights[:num_classes]).to(device)) 
+        loss_function = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
     elif args.loss == 'Topological':
-        ce_weights = np.array([1, 10, 10, 10, 10])
-        dice_ce_loss = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(ce_weights[:num_classes]).to(device)) 
+        dice_ce_loss = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
         ti_loss_function = TI_Loss.TI_Loss(dim=3, connectivity=26, inclusion=[[2,1]], exclusion=[], min_thick=1)
 
@@ -216,7 +214,7 @@ def training_run(args, results_dir):
     optimizer = torch.optim.Adam(model.parameters(), args.lr) 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
 
-    if 'Dice' in args.metric:
+    if 'Dice' in args.metrics:
         metric = DiceMetric(include_background=False, reduction="mean") 
     else:
         print('Alternate metrics not yet implemented.Exiting')
@@ -339,6 +337,8 @@ if __name__ == '__main__':
     parser.add_argument('-train_roi_size', type=tuple, default=(96, 96, 96), help='Size of ROI used for training')
     parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
+    parser.add_argument('-crop_ratios', type=list, default=[0,5,5], help='Used to calculate probability of picking a crop with center pixel of certain class.')
+    parser.add_argument('-ce_weights', type=list, default=[1,10,10], help='Weights of classes for cross entropy loss.')
 
     args = parser.parse_args()
 

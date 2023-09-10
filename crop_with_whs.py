@@ -156,9 +156,9 @@ def generate_crop_images(nifti_image_filelist, annotation_filelist = None, whs_p
 if __name__ == '__main__':
     
     # Provide folders for raw CTA images (as .nii.gz) and location to save whole heart segmentations
-    nifti_image_dir = './data/imagesTr'
-    annotations_dir = './data/labelsTr'
-    whs_pred_dir = './whsPreds/imagesTr'
+    nifti_image_dir = './data/imagesTs_asoca'
+    annotations_dir = './data/labelsTs_asoca'
+    whs_pred_dir = os.path.join('./whsPreds', nifti_image_dir.split('/')[-1])
 
     # MONAI - whole body CT segmentation model from Zoo
     whs_segmentation_bundle_path = './monai_whole_body_segmentation/'
