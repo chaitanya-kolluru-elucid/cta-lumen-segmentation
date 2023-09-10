@@ -67,7 +67,7 @@ def training_run(args, results_dir):
     images = sorted(glob.glob(os.path.join(args.data_dir, args.images_dir, "*.nii.gz")))
 
     # Get list of training labels
-    labels = sorted(glob.glob(os.path.join(args.data_dir, args.labels_dir, '*' + args.mask_sufix + '.nii.gz')))
+    labels = sorted(glob.glob(os.path.join(args.data_dir, args.labels_dir, '*' + args.mask_suffix + '.nii.gz')))
 
     # Set random seed and shuffle image list
     random.seed(3)
@@ -160,18 +160,17 @@ def training_run(args, results_dir):
     plt.figure("check", (12, 6))
     plt.subplot(1, 2, 1)
     plt.title("image")
-    plt.imshow(image[:, :, 80], cmap="gray")
+    plt.imshow(image[:, :, 30], cmap="gray")
     plt.subplot(1, 2, 2)
     plt.title("label")
-    plt.imshow(label[:, :, 80])
+    plt.imshow(label[:, :, 30])
 
     plt.savefig(os.path.join(results_dir, 'Validation data slice check.png'))
 
     # Create training and validation data loaders
-    train_ds = CacheDataset(data=train_files, transform=train_transforms, cache_rate=1, num_workers=4)
+    train_ds = Dataset(data=train_files, transform=train_transforms)
     train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, num_workers=4)
-
-    val_ds = CacheDataset(data=val_files, transform=val_transforms, cache_rate=1, num_workers=4)
+    val_ds = Dataset(data=val_files, transform=val_transforms)
     val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
 
     # Get the GPU device

@@ -8,6 +8,9 @@ segPreds/
 # Wandb files
 wandb/
 
+# Results directory
+results/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from soft_skeleton import soft_skel
+from losses.soft_skeleton import soft_skel
 from monai.networks import one_hot
 
 
