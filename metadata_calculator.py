@@ -5,6 +5,22 @@ import numpy as np
 import os
 from tqdm import tqdm
 
+def check_orientation(ct_image, ct_arr):
+    """
+    Check the NIfTI orientation, and flip to  'RPS' if needed.
+    :param ct_image: NIfTI file
+    :param ct_arr: array file
+    :return: array after flipping
+    """
+    x, y, z = nib.aff2axcodes(ct_image.affine)
+    if x != 'R':
+        ct_arr = np.flip(ct_arr, axis=0)
+    if y != 'A':
+        ct_arr = np.flip(ct_arr, axis=1)
+    if z != 'S':
+        ct_arr = np.flip(ct_arr, axis=2)
+    return ct_arr
+
 def get_training_metadata(image_list, masks_list):
 
     pixel_spacing = np.zeros((len(image_list), 3))
@@ -22,10 +38,17 @@ def get_training_metadata(image_list, masks_list):
     fg_intensity_vals = []
 
     for k in tqdm(range(len(image_list))):
-        image_data = nib.load(image_list[k]).get_fdata()
-        mask_data = nib.load(masks_list[k]).get_fdata()
+        nifti_image = nib.load(image_list[k])
+        nifti_mask = nib.load(masks_list[k])
+
+        image_data = nifti_image.get_fdata()
+        mask_data = nifti_mask.get_fdata()
+
+        image_data = check_orientation(nifti_image, image_data)
+        mask_data = check_orientation(nifti_mask, mask_data)        
 
         assert image_data.shape == mask_data.shape
+        assert (np.unique(mask_data) == np.array([0,1,2])).all()
 
         fg_intensity_vals.append(image_data[mask_data > 0])
 

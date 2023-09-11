@@ -89,7 +89,22 @@ def training_run(args, results_dir):
     train_files, val_files = data_dicts[:-num_validation_cases], data_dicts[-num_validation_cases:]
 
     # Get training metadata, used for image normalization, save to pickle files, useful for inference
-    median_pixel_spacing, fg_intensity_metrics = metadata_calculator.get_training_metadata(images, labels)
+    calculate_metadata = False
+    if os.path.exists(os.path.join(args.metadata_dir, 'median_pixel_spacing.pkl')):
+        with open(os.path.join(args.metadata_dir, 'median_pixel_spacing.pkl'), 'rb') as f:
+            median_pixel_spacing = pickle.load(f)
+
+    else:
+        calculate_metadata = True
+
+    if os.path.exists(os.path.join(args.metadata_dir, 'fg_intensity_metrics.pkl')):
+        with open(os.path.join(results_dir, 'fg_intensity_metrics.pkl'), 'rb') as f:
+            fg_intensity_metrics = pickle.load(f)
+    else:
+        calculate_metadata = True
+
+    if calculate_metadata:
+        median_pixel_spacing, fg_intensity_metrics = metadata_calculator.get_training_metadata(images, labels)
     
     with open(os.path.join(results_dir, 'median_pixel_spacing.pkl'), 'wb') as f:
         pickle.dump(median_pixel_spacing, f)
@@ -151,21 +166,17 @@ def training_run(args, results_dir):
         ]
     )
 
-    # Plot a slice of the validation dataset to confirm mask looks accurate, save to results directory
+    # Save a sample from the validation dataset to confirm mask looks accurate, save to results directory
     check_ds = Dataset(data=val_files, transform=val_transforms)
     check_loader = DataLoader(check_ds, batch_size=1)
     check_data = first(check_loader)
     image, label = (check_data["image"][0][0], check_data["label"][0][0])
-    print(f"image shape: {image.shape}, label shape: {label.shape}")
-    plt.figure("check", (12, 6))
-    plt.subplot(1, 2, 1)
-    plt.title("image")
-    plt.imshow(image[:, :, 30], cmap="gray")
-    plt.subplot(1, 2, 2)
-    plt.title("label")
-    plt.imshow(label[:, :, 150])
 
-    plt.savefig(os.path.join(results_dir, 'Validation data slice check.png'))
+    nifti_image = nib.Nifti1Image(((image * fg_intensity_metrics[1]) + fg_intensity_metrics[0]).astype(np.uint16) , affine=np.eye(4))
+    nifti_label = nib.Nifti1Image(label.astype(np.uint16), affine=np.eye(4))
+
+    nib.save(nifti_image, os.path.join(results_dir, 'Validation data image check.nii.gz'))
+    nib.save(nifti_label, os.path.join(results_dir, 'Validation data label check.nii.gz'))
 
     # Create training and validation data loaders
     train_ds = CacheDataset(data=train_files, transform=train_transforms, cache_rate=0.2,num_workers=1)
@@ -340,6 +351,7 @@ if __name__ == '__main__':
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
     parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
     parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
+    parser.add_argument('-metadata_dir', type=str, default='./metadata/hc_musc_olvz', help='Location to read the training metadata pickle files (median pixel spacing and fg intensities)')
 
     args = parser.parse_args()
 
