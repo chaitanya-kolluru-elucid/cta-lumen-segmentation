@@ -39,6 +39,18 @@ def crop_image(cta_image_path, whs_path, crop_image_save_path, annotation_image_
 
         annotation_image = annotation_reader.Execute()
 
+        # Resample the annotations to ensure that they are on the same grid (origin, spacing, direction)
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetOutputSpacing(cta.GetSpacing())    
+        resampler.SetOutputDirection(cta.GetDirection())
+        resampler.SetOutputOrigin(cta.GetOrigin())
+        resampler.SetSize(cta.GetSize())
+
+        resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+        resampler.SetDefaultPixelValue(0)
+
+        annotation_image = resampler.Execute(annotation_image)
+
     whs_reader = sitk.ImageFileReader()
     whs_reader.SetFileName(whs_path)
     whs_reader.LoadPrivateTagsOn()
@@ -161,8 +173,8 @@ if __name__ == '__main__':
     whs_pred_dir = os.path.join('./whsPreds', nifti_image_dir.split('/')[-1])
 
     # MONAI - whole body CT segmentation model from Zoo
-    whs_segmentation_bundle_path = './monai_whole_body_segmentation/'
-    run_pred_monai(model_folder=whs_segmentation_bundle_path, input_dir = nifti_image_dir, output_dir=whs_pred_dir)
+    #whs_segmentation_bundle_path = './monai_whole_body_segmentation/'
+    #run_pred_monai(model_folder=whs_segmentation_bundle_path, input_dir = nifti_image_dir, output_dir=whs_pred_dir)
 
     nifti_image_filelist = sorted(glob.glob(os.path.join(nifti_image_dir , '*.nii.gz')))
     annotations_filelist = sorted(glob.glob(os.path.join(annotations_dir , '*.nii.gz')))

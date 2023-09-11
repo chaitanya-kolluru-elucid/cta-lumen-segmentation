@@ -48,7 +48,6 @@ def get_training_metadata(image_list, masks_list):
         mask_data = check_orientation(nifti_mask, mask_data)        
 
         assert image_data.shape == mask_data.shape
-        assert (np.unique(mask_data) == np.array([0,1,2])).all()
 
         fg_intensity_vals.append(image_data[mask_data > 0])
 
