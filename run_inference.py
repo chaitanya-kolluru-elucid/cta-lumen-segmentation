@@ -15,7 +15,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
     device = torch.device("cuda:0")
 
     # Load model architecture
-    model = torch.load(os.path.join(results_dir, 'model-architecture.pt'))
+    model = torch.load(os.path.join(results_dir, 'model_architecture.pt'))
     model = model.to(device)
 
     # Load the weights checkpoint
@@ -90,7 +90,11 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
             filename = test_inputs.meta["filename_or_obj"][0].split('/')[-1]
 
             pred_filename = filename.split('.')[0] + '_seg_out.nii.gz'
-            nib.save(nifti_volume, test_preds_dir + pred_filename)
+
+            if not os.path.exists(test_preds_dir):
+                os.makedirs(test_preds_dir)
+
+            nib.save(nifti_volume, os.path.join(test_preds_dir, pred_filename))
 
 #def calculate_metrics(preds_dir, labels_dir):
 
@@ -115,9 +119,9 @@ if __name__ == '__main__':
 
     # Parse user specified arguments
     parser = argparse.ArgumentParser(description='Run inference using a segmentation model for CTA images.')
-    parser.add_argument('-train_results_folder', type=str, default='./results', help='Training results directory containing checkpoints.')
+    parser.add_argument('-train_results_folder', type=str, default='./results/11092023_035841', help='Training results directory containing checkpoints.')
     parser.add_argument('-test_images_dir', type=str, default='./data/crop_imagesTs_asoca', help='Path to the test images directory.')
-    parser.add_argument('-test_preds_dir', type=str, default='./data/segPreds/crop_imagesTs_asoca', help='Folder to save the predictions.')
+    parser.add_argument('-test_preds_dir', type=str, default='./segPreds/crop_imagesTs_asoca', help='Folder to save the predictions.')
     parser.add_argument('-test_labels_dir', type=str, default='./data/crop_labelsTs_asoca', help='Path to the test labels directory.')
 
     args = parser.parse_args()

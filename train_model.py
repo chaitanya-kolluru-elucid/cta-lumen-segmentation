@@ -94,7 +94,7 @@ def training_run(args, results_dir):
     with open(os.path.join(results_dir, 'median_pixel_spacing.pkl'), 'wb') as f:
         pickle.dump(median_pixel_spacing, f)
 
-    with open(os.path.join(results_dir, 'fg_intensity_metrics'), 'wb') as f:
+    with open(os.path.join(results_dir, 'fg_intensity_metrics.pkl'), 'wb') as f:
         pickle.dump(fg_intensity_metrics, f)
 
     set_determinism(seed=0)
@@ -168,8 +168,8 @@ def training_run(args, results_dir):
     plt.savefig(os.path.join(results_dir, 'Validation data slice check.png'))
 
     # Create training and validation data loaders
-    train_ds = Dataset(data=train_files, transform=train_transforms)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    train_ds = CacheDataset(data=train_files, transform=train_transforms, cache_rate=0.2,num_workers=1)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_ds = Dataset(data=val_files, transform=val_transforms)
     val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
 
@@ -195,10 +195,10 @@ def training_run(args, results_dir):
     
     # Get loss function
     if args.loss == 'DiceCE':
-        loss_function = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        loss_function = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
     elif args.loss == 'Topological':
-        dice_ce_loss = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, batch=True, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        dice_ce_loss = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
         ti_loss_function = TI_Loss.TI_Loss(dim=3, connectivity=26, inclusion=[[2,1]], exclusion=[], min_thick=1)
 
