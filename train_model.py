@@ -169,7 +169,7 @@ def training_run(args, results_dir):
 
     # Create training and validation data loaders
     train_ds = Dataset(data=train_files, transform=train_transforms)
-    train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, num_workers=4)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_ds = Dataset(data=val_files, transform=val_transforms)
     val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
 
@@ -286,7 +286,7 @@ def training_run(args, results_dir):
                 wandb.log({'val/metric':val_metric}, step=epoch)
 
                 # reset the status for next validation round
-                val_metric.reset()
+                metric.reset()
 
                 metric_values.append(val_metric)
                 if val_metric > best_metric:
@@ -327,8 +327,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a segmentation model for CTA images')
     parser.add_argument('-architecture', type=str, default='UNet', help='Network architecture')
     parser.add_argument('-loss', type=str, default='DiceCE', help='Network loss function')
-    parser.add_argument('-epochs', type=int, default=500, help='Number of epochs for trianing')
+    parser.add_argument('-epochs', type=int, default=50, help='Number of epochs for trianing')
     parser.add_argument('-lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('-batch_size', type=int, default=1, help='Batch size')
     parser.add_argument('-metrics', nargs='*', default='Dice', type=str, help='Metrics to collect')
     parser.add_argument('-data_dir', type=str, default='./data', help='Relative path to the training/val dataset.')
     parser.add_argument('-results_dir', type=str, default='./results', help='Relative path to the results folder.')
@@ -337,13 +338,15 @@ if __name__ == '__main__':
     parser.add_argument('-train_roi_size', type=tuple, default=(96, 96, 96), help='Size of ROI used for training')
     parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
-    parser.add_argument('-crop_ratios', type=list, default=[0,5,5], help='Used to calculate probability of picking a crop with center pixel of certain class.')
-    parser.add_argument('-ce_weights', type=list, default=[1,10,10], help='Weights of classes for cross entropy loss.')
+    parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
+    parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
 
     args = parser.parse_args()
 
     # Start wandb to track this run
-    config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, "epochs":args.epochs, "metrics":args.metrics, "roi_size":args.train_roi_size}
+    config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
+              "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
+              "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
     wandb.init(project='single-level-branching', name='initial-run', config=config)
 
     # Create a results directory for current run with date time
