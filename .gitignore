@@ -14,8 +14,13 @@ results/
 # Console output
 nohup.out
 
+# Persistent dataset caching
+cache/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
+
+
 
 # Distribution / packaging
 .Python

@@ -31,7 +31,7 @@ from monai.networks.layers import Norm
 from monai.metrics import DiceMetric, get_confusion_matrix
 from monai.losses import DiceLoss, DiceCELoss,GeneralizedDiceLoss
 from monai.inferers import sliding_window_inference
-from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch
+from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch, PersistentDataset
 from monai.config import print_config
 from monai.metrics import compute_hausdorff_distance
 
@@ -98,7 +98,7 @@ def training_run(args, results_dir):
         calculate_metadata = True
 
     if os.path.exists(os.path.join(args.metadata_dir, 'fg_intensity_metrics.pkl')):
-        with open(os.path.join(results_dir, 'fg_intensity_metrics.pkl'), 'rb') as f:
+        with open(os.path.join(args.metadata_dir, 'fg_intensity_metrics.pkl'), 'rb') as f:
             fg_intensity_metrics = pickle.load(f)
     else:
         calculate_metadata = True
@@ -179,10 +179,10 @@ def training_run(args, results_dir):
     nib.save(nifti_label, os.path.join(results_dir, 'Validation data label check.nii.gz'))
 
     # Create training and validation data loaders
-    train_ds = CacheDataset(data=train_files, transform=train_transforms, cache_rate=0.2,num_workers=1)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=6)
     val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=os.cpu_count())
 
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -259,6 +259,7 @@ def training_run(args, results_dir):
             optimizer.step()
             train_loss += loss.item()
             print(f"{step}/{len(train_ds) // train_loader.batch_size}, " f"train_loss: {loss.item():.4f}")
+            torch.cuda.empty_cache()
 
         train_loss /= step
         epoch_loss_values.append(train_loss)
@@ -285,6 +286,8 @@ def training_run(args, results_dir):
                     
                     # Compute metric for current iteration
                     metric(y_pred=val_outputs, y=val_labels)
+
+                    torch.cuda.empty_cache()
 
                 val_loss /= step
                 val_loss_values.append(val_loss)
@@ -340,7 +343,7 @@ if __name__ == '__main__':
     parser.add_argument('-loss', type=str, default='DiceCE', help='Network loss function')
     parser.add_argument('-epochs', type=int, default=50, help='Number of epochs for trianing')
     parser.add_argument('-lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('-batch_size', type=int, default=1, help='Batch size')
+    parser.add_argument('-batch_size', type=int, default=6, help='Batch size')
     parser.add_argument('-metrics', nargs='*', default='Dice', type=str, help='Metrics to collect')
     parser.add_argument('-data_dir', type=str, default='./data', help='Relative path to the training/val dataset.')
     parser.add_argument('-results_dir', type=str, default='./results', help='Relative path to the results folder.')
