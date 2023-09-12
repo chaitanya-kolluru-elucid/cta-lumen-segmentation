@@ -362,7 +362,8 @@ if __name__ == '__main__':
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
               "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
-    wandb.init(project='single-level-branching', name='initial-run', config=config)
+    
+    wandb.init(project='single-level-branching', name='initial-run-attention-unet', config=config)
 
     # Create a results directory for current run with date time
     results_dir = os.path.join(args.results_dir, datetime.now().strftime("%d%m%Y_%H%M%S"))
