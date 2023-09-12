@@ -11,6 +11,9 @@ from monai.inferers import sliding_window_inference
 
 def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
+    if not os.path.exists(test_preds_dir):
+        os.makedirs(test_preds_dir)
+
     # Get the GPU device
     device = torch.device("cuda:0")
 
@@ -30,7 +33,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
     with open(os.path.join(results_dir, 'median_pixel_spacing.pkl'), 'rb') as f:
         median_pixel_spacing = pickle.load(f)
 
-    with open(os.path.join(results_dir, 'fg_intensity_metrics'), 'rb') as f:
+    with open(os.path.join(results_dir, 'fg_intensity_metrics.pkl'), 'rb') as f:
         fg_intensity_metrics = pickle.load(f)
 
     test_transforms = Compose(
@@ -91,9 +94,6 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
             pred_filename = filename.split('.')[0] + '_seg_out.nii.gz'
 
-            if not os.path.exists(test_preds_dir):
-                os.makedirs(test_preds_dir)
-
             nib.save(nifti_volume, os.path.join(test_preds_dir, pred_filename))
 
 #def calculate_metrics(preds_dir, labels_dir):
@@ -117,12 +117,14 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
 if __name__ == '__main__':
 
+    model_run_datetime = '12092023_005708'
+
     # Parse user specified arguments
     parser = argparse.ArgumentParser(description='Run inference using a segmentation model for CTA images.')
-    parser.add_argument('-train_results_folder', type=str, default='./results/11092023_035841', help='Training results directory containing checkpoints.')
     parser.add_argument('-test_images_dir', type=str, default='./data/crop_imagesTs_asoca', help='Path to the test images directory.')
-    parser.add_argument('-test_preds_dir', type=str, default='./segPreds/crop_imagesTs_asoca', help='Folder to save the predictions.')
     parser.add_argument('-test_labels_dir', type=str, default='./data/crop_labelsTs_asoca', help='Path to the test labels directory.')
+    parser.add_argument('-train_results_folder', type=str, default=os.path.join('./results', model_run_datetime), help='Training results directory containing checkpoints.')
+    parser.add_argument('-test_preds_dir', type=str, default=os.path.join('./segPreds', model_run_datetime, 'crop_imagesTs_asoca'), help='Folder to save the predictions.')
 
     args = parser.parse_args()
 
