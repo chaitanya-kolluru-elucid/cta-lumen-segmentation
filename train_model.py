@@ -355,7 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
     parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
     parser.add_argument('-metadata_dir', type=str, default='./metadata/hc_musc_olvz', help='Location to read the training metadata pickle files (median pixel spacing and fg intensities)')
-
+    parser.add_argument('-run_name', type=str, help='Set a name for the run')
     args = parser.parse_args()
 
     # Convert necessary args to tuples
@@ -366,7 +366,7 @@ if __name__ == '__main__':
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
               "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
     
-    wandb.init(project='single-level-branching', name='initial-run-seg-resnet', config=config)
+    wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
 
     # Create a results directory for current run with date time
     results_dir = os.path.join(args.results_dir, datetime.now().strftime("%d%m%Y_%H%M%S"))
