@@ -349,7 +349,7 @@ if __name__ == '__main__':
     parser.add_argument('-results_dir', type=str, default='./results', help='Relative path to the results folder.')
     parser.add_argument('-images_dir', type=str, default='crop_imagesTr', help='Directory name containing training/val images')
     parser.add_argument('-labels_dir', type=str, default='crop_labelsTr', help='Directory name containing training/val labels')
-    parser.add_argument('-train_roi_size', type=tuple, default=(96, 96, 96), help='Size of ROI used for training')
+    parser.add_argument('-train_roi_size', type=int, nargs="+", default=[96, 96, 96], help='Size of ROI used for training')
     parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
     parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
@@ -358,12 +358,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Convert necessary args to tuples
+    args.train_roi_size = tuple(args.train_roi_size)
+
     # Start wandb to track this run
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
               "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
     
-    wandb.init(project='single-level-branching', name='initial-run-attention-unet', config=config)
+    wandb.init(project='single-level-branching', name='initial-run-seg-resnet', config=config)
 
     # Create a results directory for current run with date time
     results_dir = os.path.join(args.results_dir, datetime.now().strftime("%d%m%Y_%H%M%S"))
