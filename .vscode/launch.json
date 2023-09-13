@@ -16,7 +16,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args":["-test_images_dir", "./data/crop_imagesTs_in_domain", "-test_labels_dir", "./data/crop_labelsTs_in_domain"]
+            "args":["-test_images_dir", "crop_imagesTs_in_domain", "-test_labels_dir", "crop_labelsTs_in_domain"]
         },
         {
             "name": "Run inference crop_imagesTs_asoca",
@@ -25,7 +25,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args":["-test_images_dir", "./data/crop_imagesTs_asoca", "-test_labels_dir", "./data/crop_labelsTs_asoca"]
+            "args":["-test_images_dir", "crop_imagesTs_asoca", "-test_labels_dir", "crop_labelsTs_asoca"]
         },
         {
             "name": "Run model training crop_imagesTr",
