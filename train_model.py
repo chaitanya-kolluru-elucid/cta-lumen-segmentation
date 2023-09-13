@@ -45,6 +45,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import nibabel as nib
 from datetime import datetime
+from pytz import timezone
 import math
 from sklearn.metrics import confusion_matrix
 import metadata_calculator
@@ -369,7 +370,8 @@ if __name__ == '__main__':
     wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
 
     # Create a results directory for current run with date time
-    date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
+    tz = timezone('EST')
+    date_time = datetime.now(tz).strftime("%d%m%Y_%H%M%S")
     print('Creating the results directory in ./results/' + date_time)
     results_dir = os.path.join(args.results_dir, date_time)
 

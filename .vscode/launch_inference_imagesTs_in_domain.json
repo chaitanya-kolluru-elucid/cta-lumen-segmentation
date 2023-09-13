@@ -10,7 +10,8 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": false,
+            "args":["-test_images_dir", "./data/crop_imagesTs_in_domain", "-test_labels_dir", "./data/crop_labelsTs_in_domain"]
         }
     ]
 }
