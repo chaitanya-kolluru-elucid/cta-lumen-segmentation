@@ -182,7 +182,7 @@ def training_run(args, results_dir):
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=6)
     val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=os.cpu_count())
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=6)
 
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -366,10 +366,12 @@ if __name__ == '__main__':
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
               "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
     
-    wandb.init(project='single-level-branching', name='initial-run-seg-resnet', config=config)
+    wandb.init(project='single-level-branching', name='initial-run-attention-unet', config=config)
 
     # Create a results directory for current run with date time
-    results_dir = os.path.join(args.results_dir, datetime.now().strftime("%d%m%Y_%H%M%S"))
+    date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
+    print('Creating the results directory in ./results/' + date_time)
+    results_dir = os.path.join(args.results_dir, date_time)
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=True)
