@@ -94,11 +94,11 @@ def crop_image(cta_image_path, whs_path, crop_image_save_path, annotation_image_
     j_to_a = direction_matrix[1,1] > 0
 
     # Get left, right, anterior and posterior extremes based on masks
-    left_coordinate = np.min(seg_myo[0]) - 10 if i_to_r else np.max(seg_myo[0]) + 10
-    right_coordinate = np.max(seg_ra[0]) + 10 if i_to_r else np.min(seg_ra[0]) - 10
+    left_coordinate = np.min(seg_myo[0]) - 60 if i_to_r else np.max(seg_myo[0]) + 60
+    right_coordinate = np.max(seg_ra[0]) + 60 if i_to_r else np.min(seg_ra[0]) - 60
 
-    anterior_coordinate = max(np.max(seg_myo[1]), np.max(seg_rv[1])) + 10 if j_to_a else min(np.min(seg_myo[1]), np.min(seg_rv[1])) - 10
-    posterior_coordinate = np.min(seg_la[1]) - 10 if j_to_a else np.max(seg_la[1]) + 10
+    anterior_coordinate = max(np.max(seg_myo[1]), np.max(seg_rv[1])) + 60 if j_to_a else min(np.min(seg_myo[1]), np.min(seg_rv[1])) - 60
+    posterior_coordinate = np.min(seg_la[1]) - 60 if j_to_a else np.max(seg_la[1]) + 60
 
     # Ensure all coordinates are within the size of the image
     left_coordinate = np.clip(left_coordinate, 0, whs_mask.header.get_data_shape()[0] - 1)
@@ -168,8 +168,8 @@ def generate_crop_images(nifti_image_filelist, annotation_filelist = None, whs_p
 if __name__ == '__main__':
     
     # Provide folders for raw CTA images (as .nii.gz) and location to save whole heart segmentations
-    nifti_image_dir = './data/imagesTs_asoca'
-    annotations_dir = './data/labelsTs_asoca'
+    nifti_image_dir = './data/imagesTr'
+    annotations_dir = './data/labelsTr'
     whs_pred_dir = os.path.join('./whsPreds', nifti_image_dir.split('/')[-1])
 
     # MONAI - whole body CT segmentation model from Zoo
@@ -178,6 +178,8 @@ if __name__ == '__main__':
 
     nifti_image_filelist = sorted(glob.glob(os.path.join(nifti_image_dir , '*.nii.gz')))
     annotations_filelist = sorted(glob.glob(os.path.join(annotations_dir , '*.nii.gz')))
+
+    assert len(nifti_image_filelist) == len(annotations_filelist)
     whs_paths = sorted(glob.glob(os.path.join(whs_pred_dir, '*.nii.gz')))
 
     # Crop images based on the segmentation result
