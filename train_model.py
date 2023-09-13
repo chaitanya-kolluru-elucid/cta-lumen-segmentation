@@ -370,7 +370,7 @@ if __name__ == '__main__':
     wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
 
     # Create a results directory for current run with date time
-    tz = timezone('EST')
+    tz = timezone('US/Eastern')
     date_time = datetime.now(tz).strftime("%d%m%Y_%H%M%S")
     print('Creating the results directory in ./results/' + date_time)
     results_dir = os.path.join(args.results_dir, date_time)
