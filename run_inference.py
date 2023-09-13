@@ -117,16 +117,16 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
 if __name__ == '__main__':
 
-    model_run_datetime = '12092023_005708'
-
     # Parse user specified arguments
     parser = argparse.ArgumentParser(description='Run inference using a segmentation model for CTA images.')
     parser.add_argument('-test_images_dir', type=str, default='./data/crop_imagesTs_asoca', help='Path to the test images directory.')
     parser.add_argument('-test_labels_dir', type=str, default='./data/crop_labelsTs_asoca', help='Path to the test labels directory.')
-    parser.add_argument('-train_results_folder', type=str, default=os.path.join('./results', model_run_datetime), help='Training results directory containing checkpoints.')
-    parser.add_argument('-test_preds_dir', type=str, default=os.path.join('./segPreds', model_run_datetime, 'crop_imagesTs_asoca'), help='Folder to save the predictions.')
+    parser.add_argument('-model_run_datetime', type=str, default='120923_005708', help='Date time string that is the name of the results folder to use as the model for this inference run.')
 
     args = parser.parse_args()
+
+    args.train_results_folder = os.path.join('./results', args.model_run_datetime)
+    args.test_preds_dir = os.path.join('./segPreds', args.model_run_datetime)
 
     # Get training arguments from the results directory
     with open(os.path.join(args.train_results_folder, 'training_args.pkl'), 'rb') as f:
