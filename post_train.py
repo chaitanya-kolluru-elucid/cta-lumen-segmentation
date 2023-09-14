@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import os
 from monai.transforms import MapTransform
+import shutil
 
 from monai.utils import first, set_determinism
 from monai.transforms import (
@@ -385,6 +386,9 @@ if __name__ == '__main__':
     # Save training args to the results folder
     with open(os.path.join(pre_train_results_dir, 'training_args.pkl'), 'rb') as f:
         args = pickle.load(f)
+
+    # Copy the training args pkl file from pre_train to post_train folder
+    shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(pre_train_results_dir, 'training_args.pkl'))
 
     args.epochs = 500
     args.batch_size = 2

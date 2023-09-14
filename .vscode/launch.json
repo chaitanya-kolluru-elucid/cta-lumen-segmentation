@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
         },
         {
             "name": "Run inference crop_imagesTs_in_domain",
@@ -16,7 +16,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args":["-test_images_dir", "crop_imagesTs_in_domain", "-test_labels_dir", "crop_labelsTs_in_domain"]
+            "args":["-test_images_dir", "crop_imagesTs_in_domain", "-test_labels_dir", "crop_labelsTs_in_domain", "-model_run_datetime", "14092023_002157"]
         },
         {
             "name": "Run inference crop_imagesTs_asoca",

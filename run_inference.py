@@ -98,8 +98,8 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
 #def calculate_metrics(preds_dir, labels_dir):
 
-    # cm = torch.zeros(num_classes,num_classes) 
 #         # Confusion matrix
+#         # cm = torch.zeros(num_classes,num_classes) 
 #         # y_true = torch.squeeze(val_labels[0]).detach()
 #         # y_true = y_true.reshape(num_classes, -1)
 #         # y_true = np.argmax(y_true, axis = 0)
@@ -110,7 +110,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
 #         # cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
 
-#                             # Hausdorff distance
+#         # Hausdorff distance
 #         # hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
 
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     args.train_results_folder = os.path.join('./results', args.model_run_datetime)
     args.test_preds_dir = os.path.join('./segPreds', args.test_images_dir, args.model_run_datetime)
     args.test_images_dir = os.path.join('./data', args.test_images_dir)
-    args.test_images_dir = os.path.join('./data', args.test_labels_dir)
+    args.test_labels_dir = os.path.join('./data', args.test_labels_dir)
 
     # Get training arguments from the results directory
     with open(os.path.join(args.train_results_folder, 'training_args.pkl'), 'rb') as f:
