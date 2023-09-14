@@ -260,17 +260,17 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     
     # Get loss function
     if args.loss == 'DiceCE':
-        loss_function = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        loss_function = DiceCELoss(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
     elif args.loss == 'Topological':
-        dice_ce_loss = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        dice_ce_loss = DiceCELoss(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
         ti_loss_function = TI_Loss.TI_Loss(dim=3, connectivity=26, inclusion=[[2,1]], exclusion=[], min_thick=1)
 
         loss_function = lambda outputs, labels: dice_ce_loss(outputs, labels) + (1e-6) * ti_loss_function(outputs, labels)
     
     elif args.loss == 'clDice':
-        loss_function = cldice.soft_dice_cldice_ce(iter_=10, num_classes = num_classes, lumen_class=1)
+        loss_function = cldice.soft_dice_cldice_ce(iter_=10, num_classes = num_classes, lumen_class=1, include_bg = args.include_bg_in_loss)
 
     else:
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
@@ -394,6 +394,8 @@ if __name__ == '__main__':
     args.batch_size = 2
     args.crop_ratios = [0, 2]
     args.ce_weights = [1, 1]
+    args.include_bg_in_loss = True
+    args.dice_batch_reduction = True
 
     # Start a training run
     post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_results_dir, post_train_results_dir, args)

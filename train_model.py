@@ -207,17 +207,17 @@ def training_run(args, results_dir):
     
     # Get loss function
     if args.loss == 'DiceCE':
-        loss_function = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        loss_function = DiceCELoss(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
     elif args.loss == 'Topological':
-        dice_ce_loss = DiceCELoss(include_background=True, to_onehot_y=True, softmax=True, batch=False, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
+        dice_ce_loss = DiceCELoss(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device)) 
 
         ti_loss_function = TI_Loss.TI_Loss(dim=3, connectivity=26, inclusion=[[2,1]], exclusion=[], min_thick=1)
 
         loss_function = lambda outputs, labels: dice_ce_loss(outputs, labels) + (1e-6) * ti_loss_function(outputs, labels)
     
     elif args.loss == 'clDice':
-        loss_function = cldice.soft_dice_cldice_ce(iter_=10, num_classes = num_classes, lumen_class=1)
+        loss_function = cldice.soft_dice_cldice_ce(iter_=10, num_classes = num_classes, lumen_class=1, include_bg=args.include_bg_in_loss)
 
     else:
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
@@ -355,6 +355,8 @@ if __name__ == '__main__':
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
     parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
     parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
+    parser.add_argument('-include_bg_in_loss', type=bool, default=True, help='Flag for including background in dice based loss calculations')
+    parser.add_argument('-dice_batch_reduction', type=bool, default=False, help='Reduction method for dice based loss, set to False if incomplete annotations')
     parser.add_argument('-metadata_dir', type=str, default='./metadata/hc_musc_olvz', help='Location to read the training metadata pickle files (median pixel spacing and fg intensities)')
     parser.add_argument('-run_name', type=str, help='Set a name for the run')
     args = parser.parse_args()

@@ -20,7 +20,7 @@ class soft_cldice(nn.Module):
         return cl_dice
 
 
-def soft_dice(y_true, y_pred):
+def soft_dice(y_true, y_pred, include_bg):
     """[function to compute dice loss]
 
     Args:
@@ -30,16 +30,21 @@ def soft_dice(y_true, y_pred):
     Returns:
         [float32]: [loss value]
     """
-    # Include background in our dice calculations
-
     smooth = 1e-5
-    intersection = torch.sum((y_true * y_pred)[:,1:,...])
-    coeff = (2. *  intersection + smooth) / (torch.sum(y_true[:,1:,...]) + torch.sum(y_pred[:,1:,...]) + smooth)
+    if include_bg:
+        intersection = torch.sum((y_true * y_pred)[:,:,...])
+        union = torch.sum(y_true[:,:,...]) + torch.sum(y_pred[:,:,...]) 
+    else:
+        # Assumes background is class 0
+        intersection = torch.sum((y_true * y_pred)[:,1:,...])
+        union = torch.sum(y_true[:,1:,...]) + torch.sum(y_pred[:,1:,...]) 
+
+    coeff = (2. * intersection + smooth) / (union + smooth)
     return (1. - coeff)
 
 
 class soft_dice_cldice_ce(nn.Module):
-    def __init__(self, iter_=3, dice_weight = 0.5, cldice_weight = 0.5, smooth = 1e-5, num_classes = 3 , lumen_class=1): #TODO: Changing smooth parameter and weighting
+    def __init__(self, iter_=3, dice_weight = 0.5, cldice_weight = 0.5, smooth = 1e-5, num_classes = 3 , lumen_class=1, include_bg = True): #TODO: Changing smooth parameter and weighting
         super(soft_dice_cldice_ce, self).__init__()
         self.iter = iter_
         self.smooth = smooth
@@ -47,6 +52,7 @@ class soft_dice_cldice_ce(nn.Module):
         self.cldice_weight = cldice_weight
         self.num_classes = num_classes
         self.lumen_class = lumen_class
+        self.include_bg = include_bg
 
     def forward(self, y_pred, y_true):
 
@@ -55,7 +61,7 @@ class soft_dice_cldice_ce(nn.Module):
 
         # Binarize the predictions and calculate the Dice coefficient
         y_pred = torch.softmax(y_pred, 1)
-        dice = soft_dice(target, y_pred)
+        dice = soft_dice(target, y_pred, self.include_bg)
 
         # For clDice, we are only interested in the lumen class (index 1 should be 1 to get the lumen out)
         skel_pred = soft_skel(y_pred[:,self.lumen_class,...], self.iter)
