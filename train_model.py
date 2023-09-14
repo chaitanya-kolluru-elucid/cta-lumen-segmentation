@@ -367,7 +367,8 @@ if __name__ == '__main__':
     # Start wandb to track this run
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
-              "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
+              "crop ratios":args.crop_ratios, "ce weights":args.ce_weights, "include bg in loss":args.include_bg_in_loss,
+              "dice batch reduction":args.dice_batch_reduction}
     
     wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
 
