@@ -1,3 +1,8 @@
+import torch.nn as nn
+import torch
+import os
+from monai.transforms import MapTransform
+
 from monai.utils import first, set_determinism
 from monai.transforms import (
     AsDiscrete,
@@ -60,15 +65,69 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 # Print MONAI config
 print_config()
 
-def training_run(args, results_dir):
+class RemoveCalc(MapTransform):
+    def __init__(self, keys, calc_val = 2, bg_val = 0):
+        super().__init__(keys, False)
+        self.keys = keys
+        self.calc_val = calc_val
+        self.bg_val = bg_val
 
-    num_classes = args.num_classes
+    def __call__(self, data):
+        for key in self.keys:
+            if key in data:
+                data[key][data[key] == self.calc_val] = self.bg_val
+        return data
+
+def plot_loss_curves(epoch_loss_values, val_loss_values, val_interval, metric_values, results_dir):
+
+    plt.figure("train", (12, 6))
+    plt.subplot(1, 3, 1)
+    plt.title("Mean training Loss")
+    x = [i + 1 for i in range(len(epoch_loss_values))]
+    y = epoch_loss_values
+    plt.xlabel("epoch")
+    plt.plot(x, y)
+
+    plt.subplot(1, 3, 2)
+    plt.title("Mean validation Loss")
+    x = [(i + 1)*val_interval for i in range(len(val_loss_values))]
+    y = val_loss_values
+    plt.xlabel("epoch")
+    plt.plot(x, y)
+
+    plt.subplot(1, 3, 3)
+    plt.title("Mean validation Dice metric")
+    x = [val_interval * (i + 1) for i in range(len(metric_values))]
+    y = metric_values
+    plt.xlabel("epoch")
+    plt.plot(x, y)
+
+    plt.savefig(os.path.join(results_dir, 'Loss curves.png'))
+
+def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_results_dir, post_train_results_dir, args):
+
+    # Load the model and weights
+    model = torch.load(os.path.join(pre_train_results_dir, 'model_architecture.pt'))
+    model.load_state_dict(torch.load(os.path.join(pre_train_results_dir, 'best_val_metric_model.pt')))
+
+    # Change the last layer of the model to be two class segmentation instead of 3 class
+    model.model._modules['2']._modules['0'].conv = nn.ConvTranspose3d(32, 2, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), output_padding=(1, 1, 1))
+    model.model._modules['2']._modules['0']._modules['adn']._modules['N'] = nn.BatchNorm3d(2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    model.model._modules['2']._modules['1'].conv.unit0.conv = nn.Conv3d(2, 2, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
+
+    # Get the GPU device
+    device = torch.device("cuda:0")
+
+    # Push the model to the GPU
+    model = model.to(device)
+
+    num_classes = 2
 
     # Get list of training images
-    images = sorted(glob.glob(os.path.join(args.data_dir, args.images_dir, "*.nii.gz")))
+    images = sorted(glob.glob(os.path.join(post_train_images_dir, "*.nii.gz")))
 
     # Get list of training labels
-    labels = sorted(glob.glob(os.path.join(args.data_dir, args.labels_dir, '*' + args.mask_suffix + '.nii.gz')))
+    labels = sorted(glob.glob(os.path.join(post_train_labels_dir, '*.nii.gz')))
 
     # Set random seed and shuffle image list
     random.seed(3)
@@ -107,10 +166,10 @@ def training_run(args, results_dir):
     if calculate_metadata:
         median_pixel_spacing, fg_intensity_metrics = metadata_calculator.get_training_metadata(images, labels)
     
-    with open(os.path.join(results_dir, 'median_pixel_spacing.pkl'), 'wb') as f:
+    with open(os.path.join(post_train_results_dir, 'median_pixel_spacing.pkl'), 'wb') as f:
         pickle.dump(median_pixel_spacing, f)
 
-    with open(os.path.join(results_dir, 'fg_intensity_metrics.pkl'), 'wb') as f:
+    with open(os.path.join(post_train_results_dir, 'fg_intensity_metrics.pkl'), 'wb') as f:
         pickle.dump(fg_intensity_metrics, f)
 
     set_determinism(seed=0)
@@ -143,6 +202,11 @@ def training_run(args, results_dir):
                 ratios=args.crop_ratios,
                 num_samples=int(np.sum(args.crop_ratios)), 
             ),
+            RemoveCalc(
+                keys=["image", "label"],
+                calc_val = 2,
+                bg_val = 0
+            )
         ]
     )
     val_transforms = Compose(
@@ -164,6 +228,11 @@ def training_run(args, results_dir):
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
+            RemoveCalc(
+                keys=["image", "label"],
+                calc_val = 2,
+                bg_val = 0
+            )
         ]
     )
 
@@ -176,8 +245,8 @@ def training_run(args, results_dir):
     nifti_image = nib.Nifti1Image(((image * fg_intensity_metrics[1]) + fg_intensity_metrics[0]).astype(np.uint16) , affine=np.eye(4))
     nifti_label = nib.Nifti1Image(label.astype(np.uint16), affine=np.eye(4))
 
-    nib.save(nifti_image, os.path.join(results_dir, 'Validation data image check.nii.gz'))
-    nib.save(nifti_label, os.path.join(results_dir, 'Validation data label check.nii.gz'))
+    nib.save(nifti_image, os.path.join(post_train_results_dir, 'Validation data image check.nii.gz'))
+    nib.save(nifti_label, os.path.join(post_train_results_dir, 'Validation data label check.nii.gz'))
 
     # Create training and validation data loaders
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
@@ -185,25 +254,8 @@ def training_run(args, results_dir):
     val_ds = Dataset(data=val_files, transform=val_transforms)
     val_loader = DataLoader(val_ds, batch_size=1, num_workers=6)
 
-    # Get the GPU device
-    device = torch.device("cuda:0")
-
-    # Get network architecture
-    if args.architecture == 'UNet':
-        model = UNet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=(16, 32, 64, 128), strides=(2, 2, 2), num_res_units=2, norm=Norm.BATCH, dropout=0.2).to(device)
-
-    elif args.architecture == 'SegResNet':
-        model = SegResNet(spatial_dims=3, in_channels=1, out_channels=num_classes, norm=Norm.BATCH).to(device)
-
-    elif args.architecture == 'AttentionUnet':
-        model = AttentionUnet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=[16, 32, 64, 128, 256], strides=(2, 2, 2, 2, 2), dropout=0.0).to(device)
-
-    else:
-        print('Model architecture not found, ensure that the architecture is either UNet, SegResNet or AttentionUnet. Exiting.')
-        return
-    
     # Save the model architecture to the results folder
-    torch.save(model, os.path.join(results_dir, 'model_architecture.pt'))
+    torch.save(model, os.path.join(post_train_results_dir, 'model_architecture.pt'))
     
     # Get loss function
     if args.loss == 'DiceCE':
@@ -265,7 +317,7 @@ def training_run(args, results_dir):
         train_loss /= step
         epoch_loss_values.append(train_loss)
         print(f"epoch {epoch + 1} average loss: {train_loss:.4f}")
-        wandb.log({'train/loss':train_loss}, step=epoch)
+        print('train/loss: ', train_loss)
         scheduler.step()
 
         if (epoch + 1) % val_interval == 0:
@@ -292,13 +344,13 @@ def training_run(args, results_dir):
 
                 val_loss /= step
                 val_loss_values.append(val_loss)
-                wandb.log({'val/loss':val_loss}, step=epoch)
+                print("val/loss: ", val_loss)
 
                 print(f'Dice values on the validation set (rows are samples, cols are classes): ', metric.get_buffer().cpu())
                 
                 # aggregate the final mean dice result
-                val_metric = metric.aggregate().item()
-                wandb.log({'val/metric':val_metric}, step=epoch)
+                val_metric = metric.aggregate().item()                
+                print("val/metric: ", val_metric)
 
                 # reset the status for next validation round
                 metric.reset()
@@ -307,80 +359,38 @@ def training_run(args, results_dir):
                 if val_metric > best_metric:
                     best_metric = val_metric
                     best_metric_epoch = epoch + 1
-                    torch.save(model.state_dict(), os.path.join(results_dir, "best_val_metric_model.pt"))
+                    torch.save(model.state_dict(), os.path.join(post_train_results_dir, "best_val_metric_model.pt"))
                     print("saved new best metric model")
 
                 print(f"current epoch: {epoch + 1} \ncurrent val mean loss: {val_loss:.4f} \ncurrent val mean dice: {val_metric:.4f} \nbest val mean dice: {best_metric:.4f} at epoch: {best_metric_epoch}")
 
-    plt.figure("train", (12, 6))
-    plt.subplot(1, 3, 1)
-    plt.title("Mean training Loss")
-    x = [i + 1 for i in range(len(epoch_loss_values))]
-    y = epoch_loss_values
-    plt.xlabel("epoch")
-    plt.plot(x, y)
-
-    plt.subplot(1, 3, 2)
-    plt.title("Mean validation Loss")
-    x = [(i + 1)*val_interval for i in range(len(val_loss_values))]
-    y = val_loss_values
-    plt.xlabel("epoch")
-    plt.plot(x, y)
-
-    plt.subplot(1, 3, 3)
-    plt.title("Mean validation Dice metric")
-    x = [val_interval * (i + 1) for i in range(len(metric_values))]
-    y = metric_values
-    plt.xlabel("epoch")
-    plt.plot(x, y)
-
-    plt.savefig(os.path.join(results_dir, 'Loss curves.png'))
+    plot_loss_curves(epoch_loss_values, val_loss_values, val_interval, metric_values, post_train_results_dir)
 
 if __name__ == '__main__':
 
-    # Parse user specified arguments
-    parser = argparse.ArgumentParser(description='Train a segmentation model for CTA images')
-    parser.add_argument('-architecture', type=str, default='UNet', help='Network architecture')
-    parser.add_argument('-loss', type=str, default='DiceCE', help='Network loss function')
-    parser.add_argument('-epochs', type=int, default=50, help='Number of epochs for trianing')
-    parser.add_argument('-lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('-batch_size', type=int, default=6, help='Batch size')
-    parser.add_argument('-metrics', nargs='*', default='Dice', type=str, help='Metrics to collect')
-    parser.add_argument('-data_dir', type=str, default='./data', help='Relative path to the training/val dataset.')
-    parser.add_argument('-results_dir', type=str, default='./results', help='Relative path to the results folder.')
-    parser.add_argument('-images_dir', type=str, default='crop_imagesTr', help='Directory name containing training/val images')
-    parser.add_argument('-labels_dir', type=str, default='crop_labelsTr', help='Directory name containing training/val labels')
-    parser.add_argument('-train_roi_size', type=int, nargs="+", default=[96, 96, 96], help='Size of ROI used for training')
-    parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
-    parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
-    parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
-    parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
-    parser.add_argument('-metadata_dir', type=str, default='./metadata/hc_musc_olvz', help='Location to read the training metadata pickle files (median pixel spacing and fg intensities)')
-    parser.add_argument('-run_name', type=str, help='Set a name for the run')
-    args = parser.parse_args()
+    pre_train_results_dir = './results/12092023_005708'
 
-    # Convert necessary args to tuples
-    args.train_roi_size = tuple(args.train_roi_size)
-
-    # Start wandb to track this run
-    config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
-              "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
-              "crop ratios":args.crop_ratios, "ce weights":args.ce_weights}
-    
-    wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
+    post_train_images_dir = './data/crop_imagesTs_asoca'
+    post_train_labels_dir = './data/crop_labelsTs_asoca'
 
     # Create a results directory for current run with date time
     tz = timezone('US/Eastern')
     date_time = datetime.now(tz).strftime("%d%m%Y_%H%M%S")
     print('Creating the results directory in ./results/' + date_time)
-    results_dir = os.path.join(args.results_dir, date_time)
+    post_train_results_dir = os.path.join('./results', date_time)
 
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir, exist_ok=True)
+    if not os.path.exists(post_train_results_dir):
+        os.makedirs(post_train_results_dir)
 
     # Save training args to the results folder
-    with open(os.path.join(results_dir, 'training_args.pkl'), 'wb') as f:
-        pickle.dump(args, f)
+    with open(os.path.join(pre_train_results_dir, 'training_args.pkl'), 'rb') as f:
+        args = pickle.load(f)
+
+    args.epochs = 2
+    args.batch_size = 2
+    args.crop_ratios = [0, 2]
+    args.ce_weights = [1, 1]
 
     # Start a training run
-    training_run(args, results_dir)
+    post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_results_dir, post_train_results_dir, args)
+    
