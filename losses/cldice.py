@@ -44,12 +44,12 @@ def soft_dice(y_true, y_pred, include_bg):
 
 
 class soft_dice_cldice_ce(nn.Module):
-    def __init__(self, iter_=3, dice_weight = 0.5, cldice_weight = 0.5, smooth = 1e-5, num_classes = 3 , lumen_class=1, include_bg = True): #TODO: Changing smooth parameter and weighting
+    def __init__(self, iter_=3, dice_weight = 0.5, smooth = 1e-5, num_classes = 3 , lumen_class=1, include_bg = True): #TODO: Changing smooth parameter and weighting
         super(soft_dice_cldice_ce, self).__init__()
         self.iter = iter_
         self.smooth = smooth
         self.dice_weight = dice_weight
-        self.cldice_weight = cldice_weight
+        self.cldice_weight = (1-self.dice_weight)
         self.num_classes = num_classes
         self.lumen_class = lumen_class
         self.include_bg = include_bg

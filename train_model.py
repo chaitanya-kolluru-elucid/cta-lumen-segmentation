@@ -217,7 +217,7 @@ def training_run(args, results_dir):
         loss_function = lambda outputs, labels: dice_ce_loss(outputs, labels) + (1e-6) * ti_loss_function(outputs, labels)
     
     elif args.loss == 'clDice':
-        loss_function = cldice.soft_dice_cldice_ce(iter_=10, num_classes = num_classes, lumen_class=1, include_bg=args.include_bg_in_loss)
+        loss_function = cldice.soft_dice_cldice_ce(iter_=20, num_classes = num_classes, lumen_class=1, include_bg=args.include_bg_in_loss)
 
     else:
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
