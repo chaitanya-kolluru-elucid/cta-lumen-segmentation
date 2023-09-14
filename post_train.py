@@ -386,7 +386,7 @@ if __name__ == '__main__':
     with open(os.path.join(pre_train_results_dir, 'training_args.pkl'), 'rb') as f:
         args = pickle.load(f)
 
-    args.epochs = 2
+    args.epochs = 500
     args.batch_size = 2
     args.crop_ratios = [0, 2]
     args.ce_weights = [1, 1]
