@@ -16,23 +16,26 @@ class deep_supervision(nn.Module):
         self.loss_function = DiceCELoss(include_background=self.include_background, to_onehot_y=self.to_onehot_y, softmax=self.softmax,
                                         batch=self.batch, ce_weight = self.ce_weight)
 
-    def forward(self, y_pred, y_true):
+    def forward(self, y_pred, y_true, val=False):
 
-        batch_loss = 0
+        if val:
+            batch_loss = self.loss_function(y_pred, y_true)
 
-        for batch_index in range(y_pred.shape[0]):
-            preds = y_pred[batch_index,...]
-            target = y_true[batch_index,...]
+            return batch_loss
+        
+        else:
+            batch_loss = 0
 
-            sample_loss = 0
+            for batch_index in range(y_pred.shape[0]):
+                preds = y_pred[batch_index,...]
+                target = y_true[batch_index,...]
 
-            for scale_index in range(preds.shape[0]):
+                sample_loss = 0
 
-                pred_at_current_scale = torch.unsqueeze(preds[scale_index,...], axis=0)
-                target_image = torch.unsqueeze(target, axis=0)
-                
-                sample_loss += (0.5 ** scale_index) * self.loss_function(pred_at_current_scale, target_image)
+                for scale_index in range(preds.shape[0]):
 
-            batch_loss += sample_loss
+                    sample_loss += (0.5 ** scale_index) * self.loss_function(torch.unsqueeze(preds[scale_index,...], axis=0), torch.unsqueeze(target, axis=0))
 
-        return batch_loss
+                batch_loss += sample_loss
+
+            return batch_loss / y_pred.shape[0]

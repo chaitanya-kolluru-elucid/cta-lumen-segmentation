@@ -25,7 +25,7 @@
             "program": "./train_model.py",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args":["-architecture", "DynUNet", "-epochs", "500", "-batch_size", "1", "-run_name", "initial-dyn-unet", "-metadata_dir", "./metadata/pixel_size_isotropic_0_2"]
+            "args":["-architecture", "DynUNet", "-epochs", "500", "-batch_size", "8", "-run_name", "dyn-unet", "-metadata_dir", "./metadata/hc_musc_olvz", "-crop_ratios", "0", "1", "1", "-train_roi_size", "64", "64", "64"]
         },
         {
             "name": "Run inference crop_imagesTs_in_domain",

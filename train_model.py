@@ -32,7 +32,7 @@ from monai.networks.layers import Norm
 from monai.metrics import DiceMetric, get_confusion_matrix
 from monai.losses import DiceLoss, DiceCELoss,GeneralizedDiceLoss
 from monai.inferers import sliding_window_inference
-from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch, PersistentDataset
+from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch, PersistentDataset, ThreadDataLoader
 from monai.config import print_config
 from monai.metrics import compute_hausdorff_distance
 
@@ -185,9 +185,11 @@ def training_run(args, results_dir):
 
     # Create training and validation data loaders
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=1)
+    #train_ds = Dataset(data=train_files, transform=train_transforms)
+    #train_ds = CacheDataset(data=train_files, transform=train_transforms)
+    train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
     val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=1)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=os.cpu_count())
 
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -292,9 +294,12 @@ def training_run(args, results_dir):
                     roi_size = args.train_roi_size
                     sw_batch_size = 4
                     val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
-          
-                    val_loss += loss_function(val_outputs, val_labels).item()
-                    
+
+                    if args.loss == 'DeepSupervisionLoss':
+                        val_loss += loss_function(val_outputs, val_labels, val=True).item()
+                    else:
+                        val_loss += loss_function(val_outputs, val_labels).item()
+                        
                     val_outputs = [post_pred(i) for i in decollate_batch(val_outputs)]
                     val_labels = [post_label(i) for i in decollate_batch(val_labels)]
                     
@@ -384,9 +389,7 @@ if __name__ == '__main__':
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 
               "epochs":args.epochs, "batch size":args.batch_size, "metrics":args.metrics, "roi_size":args.train_roi_size, 
               "crop ratios":args.crop_ratios, "ce weights":args.ce_weights, "include bg in loss":args.include_bg_in_loss,
-              "dice batch reduction":args.dice_batch_reduction}
-    
-    wandb.init(project='single-level-branching', name='initial-run-' + args.run_name, config=config)
+              "dice batch reduction":args.dice_batch_reduction, "metadata dir": args.metadata_dir}
 
     # Create a results directory for current run with date time
     tz = timezone('US/Eastern')
@@ -396,6 +399,9 @@ if __name__ == '__main__':
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=True)
+
+    # Initialize wandb run
+    wandb.init(project='single-level-branching', name='initial-run-' + args.run_name + '-' + date_time, config=config)
 
     # Save training args to the results folder
     with open(os.path.join(results_dir, 'training_args.pkl'), 'wb') as f:
