@@ -24,9 +24,10 @@ from monai.transforms import (
     RandGaussianSharpend,
     RandHistogramShiftd,
     RandFlipd,
+    CastToTyped
 )
 from monai.handlers.utils import from_engine
-from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE
+from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE,DynUNet
 from monai.networks.layers import Norm
 from monai.metrics import DiceMetric, get_confusion_matrix
 from monai.losses import DiceLoss, DiceCELoss,GeneralizedDiceLoss
@@ -51,7 +52,8 @@ from sklearn.metrics import confusion_matrix
 import metadata_calculator
 import pickle
 
-from losses import TI_Loss, cldice
+from losses import TI_Loss, cldice, dsv
+import trainer
 
 import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -143,6 +145,7 @@ def training_run(args, results_dir):
                 ratios=args.crop_ratios,
                 num_samples=int(np.sum(args.crop_ratios)), 
             ),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
     val_transforms = Compose(
@@ -164,6 +167,7 @@ def training_run(args, results_dir):
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8))
         ]
     )
 
@@ -181,26 +185,32 @@ def training_run(args, results_dir):
 
     # Create training and validation data loaders
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=6)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=1)
     val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=6)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=1)
 
     # Get the GPU device
     device = torch.device("cuda:0")
 
     # Get network architecture
     if args.architecture == 'UNet':
-        model = UNet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=(16, 32, 64, 128), strides=(2, 2, 2), num_res_units=2, norm=Norm.BATCH, dropout=0.2).to(device)
+        model = UNet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=(16, 32, 64, 128), strides=(2, 2, 2), num_res_units=2, norm=Norm.BATCH, dropout=0.2)
 
     elif args.architecture == 'SegResNet':
-        model = SegResNet(spatial_dims=3, in_channels=1, out_channels=num_classes, norm=Norm.BATCH).to(device)
+        model = SegResNet(spatial_dims=3, in_channels=1, out_channels=num_classes, norm=Norm.BATCH)
 
     elif args.architecture == 'AttentionUnet':
-        model = AttentionUnet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=[16, 32, 64, 128, 256], strides=(2, 2, 2, 2, 2), dropout=0.0).to(device)
+        model = AttentionUnet(spatial_dims=3, in_channels=1, out_channels=num_classes, channels=[16, 32, 64, 128, 256], strides=(2, 2, 2, 2, 2), dropout=0.0)
+
+    elif args.architecture == 'DynUNet':
+        kernels, strides = trainer.get_kernels_strides(args.train_roi_size, median_pixel_spacing)
+        model = DynUNet(spatial_dims=3, in_channels=1, out_channels=num_classes, kernel_size=kernels, strides=strides, upsample_kernel_size=strides[1:], deep_supervision=True, deep_supr_num=3)
 
     else:
-        print('Model architecture not found, ensure that the architecture is either UNet, SegResNet or AttentionUnet. Exiting.')
+        print('Model architecture not found, ensure that the architecture is either UNet, SegResNet, AttentionUnet or DynUNet. Exiting.')
         return
+    
+    model = model.to(device)
     
     # Save the model architecture to the results folder
     torch.save(model, os.path.join(results_dir, 'model_architecture.pt'))
@@ -219,6 +229,9 @@ def training_run(args, results_dir):
     elif args.loss == 'clDice':
         loss_function = cldice.soft_dice_cldice_ce(iter_=20, num_classes = num_classes, lumen_class=1, include_bg=args.include_bg_in_loss)
 
+    elif args.loss == 'DeepSupervisionLoss':
+        loss_function = dsv.deep_supervision(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device))
+        
     else:
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
         return        
@@ -353,16 +366,19 @@ if __name__ == '__main__':
     parser.add_argument('-train_roi_size', type=int, nargs="+", default=[96, 96, 96], help='Size of ROI used for training')
     parser.add_argument('-num_classes', type=int, default=3, help='Number of classes to predict, including background.')
     parser.add_argument('-mask_suffix', type=str, default='lumen-wall-mask', help='Suffix for the label file, used to select labels.')
-    parser.add_argument('-crop_ratios', type=list, default=[0,2,2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
-    parser.add_argument('-ce_weights', type=list, default=[1,1,1], help='Weights of classes for cross entropy loss.')
+    parser.add_argument('-crop_ratios', type=int, nargs="+", default=[0, 2, 2], help='Used to calculate probability of picking a crop with center pixel of certain class and number of crops per sample.')
+    parser.add_argument('-ce_weights', type=int, nargs="+", default=[1, 1, 1], help='Weights of classes for cross entropy loss.')
     parser.add_argument('-include_bg_in_loss', type=bool, default=True, help='Flag for including background in dice based loss calculations')
     parser.add_argument('-dice_batch_reduction', type=bool, default=False, help='Reduction method for dice based loss, set to False if incomplete annotations')
     parser.add_argument('-metadata_dir', type=str, default='./metadata/hc_musc_olvz', help='Location to read the training metadata pickle files (median pixel spacing and fg intensities)')
     parser.add_argument('-run_name', type=str, help='Set a name for the run')
     args = parser.parse_args()
 
-    # Convert necessary args to tuples
+    # Convert necessary args to tuples, consistency between parameters
     args.train_roi_size = tuple(args.train_roi_size)
+    if args.architecture == 'DynUNet':
+        args.loss = 'DeepSupervisionLoss'
+        print('Since a DynUNet is requested, the loss function is automatically set to DeepSupervision Loss')
 
     # Start wandb to track this run
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 

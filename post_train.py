@@ -30,9 +30,10 @@ from monai.transforms import (
     RandGaussianSharpend,
     RandHistogramShiftd,
     RandFlipd,
+    CastToTyped
 )
 from monai.handlers.utils import from_engine
-from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE
+from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE, DynUNet
 from monai.networks.layers import Norm
 from monai.metrics import DiceMetric, get_confusion_matrix
 from monai.losses import DiceLoss, DiceCELoss,GeneralizedDiceLoss
@@ -57,8 +58,8 @@ from sklearn.metrics import confusion_matrix
 import metadata_calculator
 import pickle
 
-from losses import TI_Loss, cldice
-
+from losses import TI_Loss, cldice, dsv
+import trainer
 import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
@@ -112,10 +113,24 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     model.load_state_dict(torch.load(os.path.join(pre_train_results_dir, 'best_val_metric_model.pt')))
 
     # Change the last layer of the model to be two class segmentation instead of 3 class
-    model.model._modules['2']._modules['0'].conv = nn.ConvTranspose3d(32, 2, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), output_padding=(1, 1, 1))
-    model.model._modules['2']._modules['0']._modules['adn']._modules['N'] = nn.BatchNorm3d(2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    model.model._modules['2']._modules['1'].conv.unit0.conv = nn.Conv3d(2, 2, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
+    if args.architecture == 'UNet':
+        model.model._modules['2']._modules['0'].conv = nn.ConvTranspose3d(32, 2, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), output_padding=(1, 1, 1))
+        model.model._modules['2']._modules['0']._modules['adn']._modules['N'] = nn.BatchNorm3d(2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        model.model._modules['2']._modules['1'].conv.unit0.conv = nn.Conv3d(2, 2, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
 
+    elif args.architecture == 'DynUNet':
+        model.output_block.conv.conv = nn.Conv3d(32, 2, kernel_size=(1,1,1), stride=(1,1,1))
+        model.deep_supervision_heads._modules['0'].conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        model.deep_supervision_heads._modules['1'].conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        model.deep_supervision_heads._modules['2'].conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        model.skip_layers.next_layer.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        model.skip_layers.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        model.skip_layers.next_layer.super_head.conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+
+    else:
+        print('Alternate architectures not yet implemented for a different class number post-training. Exiting.')
+        return
+    
     # Get the GPU device
     device = torch.device("cuda:0")
 
@@ -207,7 +222,8 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
                 keys=["image", "label"],
                 calc_val = 2,
                 bg_val = 0
-            )
+            ),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
     val_transforms = Compose(
@@ -233,7 +249,8 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
                 keys=["image", "label"],
                 calc_val = 2,
                 bg_val = 0
-            )
+            ),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
 
@@ -272,6 +289,9 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     elif args.loss == 'clDice':
         loss_function = cldice.soft_dice_cldice_ce(iter_=20, num_classes = num_classes, lumen_class=1, include_bg = args.include_bg_in_loss)
 
+    elif args.loss == 'DeepSupervisionLoss':
+            loss_function = dsv(include_background=args.include_bg_in_loss, to_onehot_y=True, softmax=True, batch=args.dice_batch_reduction, ce_weight=torch.Tensor(args.ce_weights).to(device))
+        
     else:
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
         return        
@@ -383,19 +403,24 @@ if __name__ == '__main__':
     if not os.path.exists(post_train_results_dir):
         os.makedirs(post_train_results_dir)
 
-    # Save training args to the results folder
+    # Read training args from pre_train results folder
     with open(os.path.join(pre_train_results_dir, 'training_args.pkl'), 'rb') as f:
         args = pickle.load(f)
 
     # Copy the training args pkl file from pre_train to post_train folder
     shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(pre_train_results_dir, 'training_args.pkl'))
 
+    # Post training specific argument defaults
     args.epochs = 500
     args.batch_size = 2
-    args.crop_ratios = [0, 2]
+    args.crop_ratios = [2, 2]
     args.ce_weights = [1, 1]
     args.include_bg_in_loss = True
     args.dice_batch_reduction = True
+
+    # Save training args to the post_train results folder
+    with open(os.path.join(pre_train_results_dir, 'post_training_args.pkl'), 'wb') as f:
+        args = pickle.load(f)
 
     # Start a training run
     post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_results_dir, post_train_results_dir, args)

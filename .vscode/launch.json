@@ -7,13 +7,31 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
+        },
+        {
+            "name": "Python: Run train model defaults",
+            "type": "python",
+            "request": "launch",
+            "program": "./train_model.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args":["-run_name", "test"]
+        },
+        {
+            "name": "Python: Run train_model DynUnet",
+            "type": "python",
+            "request": "launch",
+            "program": "./train_model.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args":["-architecture", "DynUNet", "-epochs", "500", "-batch_size", "1", "-run_name", "initial-dyn-unet", "-metadata_dir", "./metadata/pixel_size_isotropic_0_2"]
         },
         {
             "name": "Run inference crop_imagesTs_in_domain",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "./run_inference.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args":["-test_images_dir", "crop_imagesTs_in_domain", "-test_labels_dir", "crop_labelsTs_in_domain", "-model_run_datetime", "14092023_002157"]
@@ -22,7 +40,7 @@
             "name": "Run inference crop_imagesTs_asoca",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "./run_inference.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args":["-test_images_dir", "crop_imagesTs_asoca", "-test_labels_dir", "crop_labelsTs_asoca"]
@@ -31,7 +49,7 @@
             "name": "Run model training crop_imagesTr",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "./train_model.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args":["-architecture", "UNet", "-epochs", "500", "-run_name", "test"]
