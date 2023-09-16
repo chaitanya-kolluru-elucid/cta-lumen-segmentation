@@ -192,8 +192,8 @@ def training_run(args, results_dir):
     #train_ds = Dataset(data=train_files, transform=train_transforms)
     #train_ds = CacheDataset(data=train_files, transform=train_transforms)
     train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
-    val_ds = PersistentDataset(data=val_files, transform=val_transforms, cache_dir = './cache')
-    val_loader = ThreadDataLoader(val_ds, batch_size=1, num_workers=0)
+    val_ds = CacheDataset(data=val_files, transform=val_transforms)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=0)
 
     # Get the GPU device
     device = torch.device("cuda:0")
