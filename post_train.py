@@ -158,7 +158,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
         return
     
     num_cases = len(images)
-    num_validation_cases = math.floor(0.2 * num_cases)
+    num_validation_cases = math.floor(args.val_ratio * num_cases)
 
     # Create data dictionaries, training and validatoin
     data_dicts = [{"image": image_name, "label": label_name} for image_name, label_name in zip(images, labels)]
