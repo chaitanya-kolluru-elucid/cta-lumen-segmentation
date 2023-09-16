@@ -51,6 +51,7 @@ import math
 from sklearn.metrics import confusion_matrix
 import metadata_calculator
 import pickle
+import gc
 
 from losses import TI_Loss, cldice, dsv
 import trainer
@@ -188,8 +189,8 @@ def training_run(args, results_dir):
     #train_ds = Dataset(data=train_files, transform=train_transforms)
     #train_ds = CacheDataset(data=train_files, transform=train_transforms)
     train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
-    val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=os.cpu_count())
+    val_ds = PersistentDataset(data=val_files, transform=val_transforms, cache_dir = './cache')
+    val_loader = ThreadDataLoader(val_ds, batch_size=1, num_workers=0)
 
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -293,7 +294,7 @@ def training_run(args, results_dir):
                     val_inputs, val_labels = (val_data["image"].to(device), val_data["label"].to(device))
                     roi_size = args.train_roi_size
                     sw_batch_size = 4
-                    val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
+                    val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model, device=torch.device('cpu'))
 
                     if args.loss == 'DeepSupervisionLoss':
                         val_loss += loss_function(val_outputs, val_labels, val=True).item()
@@ -307,6 +308,8 @@ def training_run(args, results_dir):
                     metric(y_pred=val_outputs, y=val_labels)
 
                     torch.cuda.empty_cache()
+                    del val_outputs, val_labels
+                    gc.collect()
 
                 val_loss /= step
                 val_loss_values.append(val_loss)
