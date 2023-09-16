@@ -58,7 +58,10 @@ import trainer
 
 import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
+resource.setrlimit(resource.RLIMIT_NOFILE, (100000, rlimit[1]))
+
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # Print MONAI config
 print_config()
