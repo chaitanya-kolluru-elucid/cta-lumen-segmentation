@@ -81,7 +81,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
             test_inputs = test_data["image"].to(device)
             roi_size = training_args.train_roi_size
             sw_batch_size = 4
-            test_data["pred"] = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model, device=torch.device('cpu'))
+            test_data["pred"] = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model, sw_device=torch.device('cpu'), device=torch.device('cpu'))
 
             test_data = [post_transforms(i) for i in decollate_batch(test_data)]
 

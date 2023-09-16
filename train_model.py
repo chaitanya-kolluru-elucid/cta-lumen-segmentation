@@ -297,7 +297,7 @@ def training_run(args, results_dir):
                     val_inputs, val_labels = (val_data["image"].to(device), val_data["label"].to(device))
                     roi_size = args.train_roi_size
                     sw_batch_size = 4
-                    val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model, device=torch.device('cpu'))
+                    val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model, sw_device=torch.device('cpu'), device=torch.device('cpu'))
 
                     if args.loss == 'DeepSupervisionLoss':
                         val_loss += loss_function(val_outputs, val_labels, val=True).item()
