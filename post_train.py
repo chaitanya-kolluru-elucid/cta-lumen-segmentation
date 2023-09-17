@@ -139,7 +139,10 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     # Push the model to the GPU
     model = model.to(device)
 
-    num_classes = 2
+    if args.convertModelToTwoChannelOutput:
+        num_classes = 2
+    else:
+        num_classes = 3
 
     # Get list of training images
     images = sorted(glob.glob(os.path.join(post_train_images_dir, "*.nii.gz")))
@@ -220,7 +223,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
                 ratios=args.crop_ratios,
                 num_samples=int(np.sum(args.crop_ratios)), 
             ),
-            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
+            #CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
     val_transforms = Compose(
@@ -242,7 +245,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
-            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
+            #CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
 
@@ -264,9 +267,9 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
 
     # Create training and validation data loaders
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=6)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
     val_ds = Dataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=6)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=0)
 
     # Save the model architecture to the results folder
     torch.save(model, os.path.join(post_train_results_dir, 'model_architecture.pt'))
@@ -325,6 +328,10 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = loss_function(outputs, labels)
+
+            print('outputs shape: ', outputs.shape)
+            print('labels shape: ', labels.shape)
+            
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -409,10 +416,11 @@ if __name__ == '__main__':
     # Post training specific argument defaults
     args.epochs = 500
     args.batch_size = 2
-    args.crop_ratios = [2, 2, 2]
+    args.crop_ratios = [1, 1, 1]
     args.ce_weights = [1, 1, 1]
     args.include_bg_in_loss = True
     args.dice_batch_reduction = True
+    args.val_ratio = 0.2
 
     args.convertModelToTwoChannelOutput = False
     args.removeCalcFromLabels = False
