@@ -328,10 +328,6 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = loss_function(outputs, labels)
-
-            print('outputs shape: ', outputs.shape)
-            print('labels shape: ', labels.shape)
-            
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
