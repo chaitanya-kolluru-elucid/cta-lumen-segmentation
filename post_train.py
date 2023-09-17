@@ -404,7 +404,7 @@ if __name__ == '__main__':
         args = pickle.load(f)
 
     # Copy the training args pkl file from pre_train to post_train folder
-    shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(pre_train_results_dir, 'training_args.pkl'))
+    shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(post_train_results_dir, 'training_args.pkl'))
 
     # Post training specific argument defaults
     args.epochs = 500
