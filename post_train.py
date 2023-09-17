@@ -388,7 +388,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
 
 if __name__ == '__main__':
 
-    pre_train_results_dir = './results/13092023_235713'
+    pre_train_results_dir = './results/12092023_005708'
 
     post_train_images_dir = './data/crop_imagesTs_asoca'
     post_train_labels_dir = './data/crop_labelsTs_asoca'
@@ -410,7 +410,7 @@ if __name__ == '__main__':
     shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(post_train_results_dir, 'training_args.pkl'))
 
     # Post training specific argument defaults
-    args.epochs = 500
+    args.epochs = 1000
     args.batch_size = 2
     args.crop_ratios = [1, 1, 1]
     args.ce_weights = [1, 1, 1]
