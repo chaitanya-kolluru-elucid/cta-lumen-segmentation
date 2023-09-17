@@ -418,8 +418,8 @@ if __name__ == '__main__':
     args.removeCalcFromLabels = False
 
     # Save training args to the post_train results folder
-    with open(os.path.join(pre_train_results_dir, 'post_training_args.pkl'), 'wb') as f:
-        args = pickle.load(f)
+    with open(os.path.join(post_train_results_dir, 'post_training_args.pkl'), 'wb') as f:
+        pickle.dump(args, f)
 
     # Start a training run
     post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_results_dir, post_train_results_dir, args)
