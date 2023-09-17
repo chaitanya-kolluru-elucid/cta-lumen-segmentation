@@ -223,7 +223,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
                 ratios=args.crop_ratios,
                 num_samples=int(np.sum(args.crop_ratios)), 
             ),
-            #CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
     val_transforms = Compose(
@@ -245,7 +245,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
-            #CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
+            CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
 
@@ -392,10 +392,10 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
 
 if __name__ == '__main__':
 
-    pre_train_results_dir = './results/12092023_005708'
+    pre_train_results_dir = './results/13092023_235713'
 
-    post_train_images_dir = './data/crop_imagesTr_mlb_in_house_plus_rsip'
-    post_train_labels_dir = './data/crop_labelsTr_mlb_in_house_plus_rsip'
+    post_train_images_dir = './data/crop_imagesTs_asoca'
+    post_train_labels_dir = './data/crop_labelsTs_asoca'
 
     # Create a results directory for current run with date time
     tz = timezone('US/Eastern')
