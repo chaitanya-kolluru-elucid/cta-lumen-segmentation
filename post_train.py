@@ -413,10 +413,10 @@ if __name__ == '__main__':
     args.epochs = 1000
     args.batch_size = 2
     args.crop_ratios = [1, 1, 1]
-    args.ce_weights = [1, 1, 1]
+    args.ce_weights = [1, 10, 10]
     args.include_bg_in_loss = True
     args.dice_batch_reduction = True
-    args.val_ratio = 0.2
+    args.val_ratio = 0.1
 
     args.convertModelToTwoChannelOutput = False
     args.removeCalcFromLabels = False

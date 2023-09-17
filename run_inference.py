@@ -8,6 +8,8 @@ from monai.transforms import Compose, LoadImaged, EnsureChannelFirstd, ScaleInte
 from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch
 import nibabel as nib
 from monai.inferers import sliding_window_inference
+from scipy.spatial.distance import dice
+import numpy as np
 
 def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
@@ -96,32 +98,59 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
             nib.save(nifti_volume, os.path.join(test_preds_dir, pred_filename))
 
-#def calculate_metrics(preds_dir, labels_dir):
+def sort_key(x):
+    splits = x.split('/')[-1]
+    return len(splits), splits
 
-#         # Confusion matrix
-#         # cm = torch.zeros(num_classes,num_classes) 
-#         # y_true = torch.squeeze(val_labels[0]).detach()
-#         # y_true = y_true.reshape(num_classes, -1)
-#         # y_true = np.argmax(y_true, axis = 0)
+def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3):
 
-#         # y_pred = torch.squeeze(val_outputs[0]).detach()
-#         # y_pred = y_pred.reshape(num_classes, -1)
-#         # y_pred = np.argmax(y_pred, axis = 0)
+        predsList = sorted(glob.glob(os.path.join(test_preds_dir, '*.nii.gz')), key = sort_key)
+        labelsList = sorted(glob.glob(os.path.join(test_labels_dir, '*.nii.gz')), key = sort_key)
 
-#         # cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
+        assert len(predsList) == len(labelsList)
 
-#         # Hausdorff distance
-#         # hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
+        dice_vals = np.zeros((num_label_classes,len(predsList)))
 
+        for k in range(len(predsList)):
 
+            current_prediction = nib.load(predsList[k]).get_fdata()
+            current_label = nib.load(labelsList[k]).get_fdata()
+
+            current_prediction = np.reshape(current_prediction, (-1,))
+            current_label = np.reshape(current_label, (-1,))
+
+            for label_class in range(num_label_classes):
+                prediction_mask = current_prediction == label_class
+                label_mask = current_label == label_class
+
+                dice_vals[label_class, k] = 1 - dice(prediction_mask, label_mask)
+
+        return dice_vals
+
+# Confusion matrix
+# cm = torch.zeros(num_classes,num_classes) 
+# y_true = torch.squeeze(val_labels[0]).detach()
+# y_true = y_true.reshape(num_classes, -1)
+# y_true = np.argmax(y_true, axis = 0)
+
+# y_pred = torch.squeeze(val_outputs[0]).detach()
+# y_pred = y_pred.reshape(num_classes, -1)
+# y_pred = np.argmax(y_pred, axis = 0)
+
+# cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
+
+# Hausdorff distance
+# hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
 
 if __name__ == '__main__':
+
+    num_label_classes = 2
 
     # Parse user specified arguments
     parser = argparse.ArgumentParser(description='Run inference using a segmentation model for CTA images.')
     parser.add_argument('-test_images_dir', type=str, default='crop_imagesTs_asoca', help='Path to the test images directory.')
     parser.add_argument('-test_labels_dir', type=str, default='crop_labelsTs_asoca', help='Path to the test labels directory.')
-    parser.add_argument('-model_run_datetime', type=str, default='12092023_005708', help='Date time string that is the name of the results folder to use as the model for this inference run.')
+    parser.add_argument('-model_run_datetime', type=str, default='17092023_152632', help='Date time string that is the name of the results folder to use as the model for this inference run.')
 
     args = parser.parse_args()
 
@@ -131,13 +160,18 @@ if __name__ == '__main__':
     args.test_labels_dir = os.path.join('./data', args.test_labels_dir)
 
     # Get training arguments from the results directory
-    with open(os.path.join(args.train_results_folder, 'training_args.pkl'), 'rb') as f:
+    with open(os.path.join(args.train_results_folder, 'post_training_args.pkl'), 'rb') as f:
         training_args = pickle.load(f)
 
     # Run inference
-    run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
+    #run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
 
     # Calculate metrics (Dice, ASD, confusion matrix)
-    #calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir)
+    dice_metric = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes)
 
+    # Print dice values
+    print('Dice metric:')
+    print(dice_metric)
 
+    print('Mean Dice value across classes:')
+    print(np.mean(dice_metric, axis=1))
