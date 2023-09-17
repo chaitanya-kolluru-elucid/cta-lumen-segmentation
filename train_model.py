@@ -89,7 +89,7 @@ def training_run(args, results_dir):
         return
     
     num_cases = len(images)
-    num_validation_cases = math.floor(0.2 * num_cases)
+    num_validation_cases = math.floor(args.val_ratio * num_cases)
 
     # Create data dictionaries, training and validatoin
     data_dicts = [{"image": image_name, "label": label_name} for image_name, label_name in zip(images, labels)]
@@ -364,6 +364,7 @@ if __name__ == '__main__':
 
     # Parse user specified arguments
     parser = argparse.ArgumentParser(description='Train a segmentation model for CTA images')
+    parser.add_argument('-val_ratio', type=float, default=0.2, help='Percentage of cases to consider for validation')
     parser.add_argument('-architecture', type=str, default='UNet', help='Network architecture')
     parser.add_argument('-loss', type=str, default='DiceCE', help='Network loss function')
     parser.add_argument('-epochs', type=int, default=50, help='Number of epochs for trianing')
