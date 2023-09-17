@@ -112,24 +112,26 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     model = torch.load(os.path.join(pre_train_results_dir, 'model_architecture.pt'))
     model.load_state_dict(torch.load(os.path.join(pre_train_results_dir, 'best_val_metric_model.pt')))
 
-    # Change the last layer of the model to be two class segmentation instead of 3 class
-    if args.architecture == 'UNet':
-        model.model._modules['2']._modules['0'].conv = nn.ConvTranspose3d(32, 2, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), output_padding=(1, 1, 1))
-        model.model._modules['2']._modules['0']._modules['adn']._modules['N'] = nn.BatchNorm3d(2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        model.model._modules['2']._modules['1'].conv.unit0.conv = nn.Conv3d(2, 2, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
+    if args.convertModelToTwoChannelOutput:
 
-    elif args.architecture == 'DynUNet':
-        model.output_block.conv.conv = nn.Conv3d(32, 2, kernel_size=(1,1,1), stride=(1,1,1))
-        model.deep_supervision_heads._modules['0'].conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
-        model.deep_supervision_heads._modules['1'].conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
-        model.deep_supervision_heads._modules['2'].conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
-        model.skip_layers.next_layer.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
-        model.skip_layers.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
-        model.skip_layers.next_layer.super_head.conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+        # Change the last layer of the model to be two class segmentation instead of 3 class
+        if args.architecture == 'UNet':
+            model.model._modules['2']._modules['0'].conv = nn.ConvTranspose3d(32, 2, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), output_padding=(1, 1, 1))
+            model.model._modules['2']._modules['0']._modules['adn']._modules['N'] = nn.BatchNorm3d(2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            model.model._modules['2']._modules['1'].conv.unit0.conv = nn.Conv3d(2, 2, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
 
-    else:
-        print('Alternate architectures not yet implemented for a different class number post-training. Exiting.')
-        return
+        elif args.architecture == 'DynUNet':
+            model.output_block.conv.conv = nn.Conv3d(32, 2, kernel_size=(1,1,1), stride=(1,1,1))
+            model.deep_supervision_heads._modules['0'].conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+            model.deep_supervision_heads._modules['1'].conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+            model.deep_supervision_heads._modules['2'].conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+            model.skip_layers.next_layer.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(256, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+            model.skip_layers.next_layer.next_layer.super_head.conv.conv = nn.Conv3d(128, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+            model.skip_layers.next_layer.super_head.conv.conv = nn.Conv3d(64, 2, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+
+        else:
+            print('Alternate architectures not yet implemented for a different class number post-training. Exiting.')
+            return
     
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -218,11 +220,6 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
                 ratios=args.crop_ratios,
                 num_samples=int(np.sum(args.crop_ratios)), 
             ),
-            RemoveCalc(
-                keys=["image", "label"],
-                calc_val = 2,
-                bg_val = 0
-            ),
             CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
@@ -245,14 +242,13 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
-            RemoveCalc(
-                keys=["image", "label"],
-                calc_val = 2,
-                bg_val = 0
-            ),
             CastToTyped(keys=["image", "label"], dtype=(np.float32, np.uint8)),
         ]
     )
+
+    if args.removeCalcFromLabels:
+        train_transforms.insert(-1, RemoveCalc(keys=["image", "label"], calc_val = 2, bg_val = 0))
+        val_transforms.insert(-1, RemoveCalc(keys=["image", "label"], calc_val = 2, bg_val = 0))
 
     # Save a sample from the validation dataset to confirm mask looks accurate, save to results directory
     check_ds = Dataset(data=val_files, transform=val_transforms)
@@ -391,8 +387,8 @@ if __name__ == '__main__':
 
     pre_train_results_dir = './results/12092023_005708'
 
-    post_train_images_dir = './data/crop_imagesTs_asoca'
-    post_train_labels_dir = './data/crop_labelsTs_asoca'
+    post_train_images_dir = './data/crop_imagesTr_mlb_in_house_plus_rsip'
+    post_train_labels_dir = './data/crop_labelsTr_mlb_in_house_plus_rsip'
 
     # Create a results directory for current run with date time
     tz = timezone('US/Eastern')
@@ -413,10 +409,13 @@ if __name__ == '__main__':
     # Post training specific argument defaults
     args.epochs = 500
     args.batch_size = 2
-    args.crop_ratios = [2, 2]
-    args.ce_weights = [1, 1]
+    args.crop_ratios = [2, 2, 2]
+    args.ce_weights = [1, 1, 1]
     args.include_bg_in_loss = True
     args.dice_batch_reduction = True
+
+    args.convertModelToTwoChannelOutput = False
+    args.removeCalcFromLabels = False
 
     # Save training args to the post_train results folder
     with open(os.path.join(pre_train_results_dir, 'post_training_args.pkl'), 'wb') as f:
