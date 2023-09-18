@@ -105,7 +105,7 @@ def sort_key(x):
     splits = x.split('/')[-1]
     return len(splits), splits
 
-def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3):
+def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3, compute_cm = False):
 
         predsList = sorted(glob.glob(os.path.join(test_preds_dir, '*.nii.gz')), key = sort_key)
         labelsList = sorted(glob.glob(os.path.join(test_labels_dir, '*.nii.gz')), key = sort_key)
@@ -135,11 +135,12 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3):
 
                 dice_vals[label_class, k] = 1 - dice(prediction_mask, label_mask)
 
-            if num_label_classes == 2:
-                current_label[current_label == 2] = 0
-                current_prediction[current_prediction == 2] = 0
+            if compute_cm:
+                if num_label_classes == 2:
+                    current_label[current_label == 2] = 0
+                    current_prediction[current_prediction == 2] = 0
 
-            confusion_matrix_var[:,:, k] = confusion_matrix(current_label, current_prediction)
+                confusion_matrix_var[:,:, k] = confusion_matrix(current_label, current_prediction)
 
         return dice_vals, confusion_matrix_var
 
@@ -155,6 +156,7 @@ if __name__ == '__main__':
     parser.add_argument('-test_images_dir', type=str, default='crop_imagesTs_asoca', help='Path to the test images directory.')
     parser.add_argument('-test_labels_dir', type=str, default='crop_labelsTs_asoca', help='Path to the test labels directory.')
     parser.add_argument('-model_run_datetime', type=str, default='17092023_152632', help='Date time string that is the name of the results folder to use as the model for this inference run.')
+    parser.add_argument('-compute_confusion_matrix', type=bool, default=False, help='Flag to compute confusion matrix')
 
     args = parser.parse_args()
 
@@ -171,7 +173,7 @@ if __name__ == '__main__':
     #run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
 
     # Calculate metrics (Dice, ASD, confusion matrix)
-    dice_metric, confusion_matrix_var = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes)
+    dice_metric, confusion_matrix_var = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes, compute_cm = args.compute_confusion_matrix)
 
     # Print dice values
     print('Dice metric:')
