@@ -36,6 +36,7 @@ from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch, Persi
 from monai.config import print_config
 from monai.metrics import compute_hausdorff_distance
 
+import sys
 import argparse
 import wandb
 import torch
@@ -242,7 +243,7 @@ def training_run(args, results_dir):
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
         return        
 
-    optimizer = torch.optim.Adam(model.parameters(), args.lr) 
+    optimizer = torch.optim.AdamW(model.parameters(), args.lr) 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
 
     if 'Dice' in args.metrics:
@@ -391,6 +392,10 @@ if __name__ == '__main__':
     if args.architecture == 'DynUNet':
         args.loss = 'DeepSupervisionLoss'
         print('Since a DynUNet is requested, the loss function is automatically set to DeepSupervision Loss')
+
+    if args.run_name is None:
+        print('Run name required. Exiting.')
+        sys.exit(1)
 
     # Start wandb to track this run
     config = {"learning_rate": args.lr, "architecture":args.architecture, "loss":args.loss, 

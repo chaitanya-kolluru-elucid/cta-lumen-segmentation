@@ -10,6 +10,8 @@ import nibabel as nib
 from monai.inferers import sliding_window_inference
 from scipy.spatial.distance import dice
 import numpy as np
+from sklearn.metrics import confusion_matrix
+from tqdm import tqdm
 
 def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
@@ -28,7 +30,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
     model.eval()
 
     # Create appropriate dictionary lists
-    test_images = glob.glob(os.path.join(test_images_dir, '*.nii.gz'))
+    test_images = sorted(glob.glob(os.path.join(test_images_dir, '*.nii.gz')))
     test_dicts = [{"image": image} for image in test_images]
 
     # Load the image metadata from the training set
@@ -78,6 +80,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
         ]
         )
 
+    print('Running inference on ' + str(len(test_images)) + ' cases.')
     with torch.no_grad():
         for test_data in test_loader:
             test_inputs = test_data["image"].to(device)
@@ -111,7 +114,14 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3):
 
         dice_vals = np.zeros((num_label_classes,len(predsList)))
 
-        for k in range(len(predsList)):
+        confusion_matrix_var = np.zeros((num_label_classes, num_label_classes, len(predsList)))
+
+        print('Prediction image list: ')
+        print(predsList)
+
+        print('Computing metrics')
+
+        for k in tqdm(range(len(predsList))):
 
             current_prediction = nib.load(predsList[k]).get_fdata()
             current_label = nib.load(labelsList[k]).get_fdata()
@@ -125,19 +135,13 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3):
 
                 dice_vals[label_class, k] = 1 - dice(prediction_mask, label_mask)
 
-        return dice_vals
+            if num_label_classes == 2:
+                current_label[current_label == 2] = 0
+                current_prediction[current_prediction == 2] = 0
 
-# Confusion matrix
-# cm = torch.zeros(num_classes,num_classes) 
-# y_true = torch.squeeze(val_labels[0]).detach()
-# y_true = y_true.reshape(num_classes, -1)
-# y_true = np.argmax(y_true, axis = 0)
+            confusion_matrix_var[:,:, k] = confusion_matrix(current_label, current_prediction)
 
-# y_pred = torch.squeeze(val_outputs[0]).detach()
-# y_pred = y_pred.reshape(num_classes, -1)
-# y_pred = np.argmax(y_pred, axis = 0)
-
-# cm += confusion_matrix(y_true, y_pred, labels=range(num_classes))
+        return dice_vals, confusion_matrix_var
 
 # Hausdorff distance
 # hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
@@ -167,7 +171,7 @@ if __name__ == '__main__':
     #run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
 
     # Calculate metrics (Dice, ASD, confusion matrix)
-    dice_metric = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes)
+    dice_metric, confusion_matrix_var = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes)
 
     # Print dice values
     print('Dice metric:')
@@ -175,3 +179,6 @@ if __name__ == '__main__':
 
     print('Mean Dice value across classes:')
     print(np.mean(dice_metric, axis=1))
+
+    print('Overall confusion matrix')
+    print(np.sum(confusion_matrix_var, axis=2))

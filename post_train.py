@@ -110,7 +110,9 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
 
     # Load the model and weights
     model = torch.load(os.path.join(pre_train_results_dir, 'model_architecture.pt'))
-    model.load_state_dict(torch.load(os.path.join(pre_train_results_dir, 'best_val_metric_model.pt')))
+
+    if args.usePreTrainWeights:
+        model.load_state_dict(torch.load(os.path.join(pre_train_results_dir, 'best_val_metric_model.pt')))
 
     if args.convertModelToTwoChannelOutput:
 
@@ -410,12 +412,13 @@ if __name__ == '__main__':
     shutil.copy(os.path.join(pre_train_results_dir, 'training_args.pkl'), os.path.join(post_train_results_dir, 'training_args.pkl'))
 
     # Post training specific argument defaults
+    args.usePreTrainWeights = False
     args.epochs = 1000
     args.batch_size = 2
-    args.crop_ratios = [1, 1, 1]
-    args.ce_weights = [1, 10, 10]
+    args.crop_ratios = [6, 6, 6]
+    args.ce_weights = [1, 1, 1]
     args.include_bg_in_loss = True
-    args.dice_batch_reduction = True
+    args.dice_batch_reduction = False
     args.val_ratio = 0.1
 
     args.convertModelToTwoChannelOutput = False
