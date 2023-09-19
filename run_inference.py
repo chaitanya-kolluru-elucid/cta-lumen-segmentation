@@ -170,7 +170,7 @@ if __name__ == '__main__':
         training_args = pickle.load(f)
 
     # Run inference
-    #run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
+    run_inference(results_dir=args.train_results_folder, test_images_dir=args.test_images_dir, test_preds_dir=args.test_preds_dir, training_args=training_args)
 
     # Calculate metrics (Dice, ASD, confusion matrix)
     dice_metric, confusion_matrix_var = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes, compute_cm = args.compute_confusion_matrix)
