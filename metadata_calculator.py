@@ -5,6 +5,10 @@ import numpy as np
 import os
 from tqdm import tqdm
 
+import logging
+logging.basicConfig(filename='metadata_calculator2.log', level=logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%Y-%m-%d %H:%M:%S")
+
 def check_orientation(ct_image, ct_arr):
     """
     Check the NIfTI orientation, and flip to  'RPS' if needed.
@@ -49,10 +53,26 @@ def get_training_metadata(image_list, masks_list):
 
         assert image_data.shape == mask_data.shape
 
+        fg_array = image_data[mask_data > 0]
+
         fg_intensity_vals.append(image_data[mask_data > 0])
+
+        logging.info('Image filename: %s', image_list[k])
+        logging.info('Foreground pixel count: %s', str(fg_array.shape))
+        logging.info('Foreground intensity vals: Mean: %s, Std: %s, upper percentile: %s, lower percentile: %s', str(np.mean(fg_array)), str(np.std(fg_array)), str(np.percentile(fg_array, 99.5)), str(np.percentile(fg_array, 0.5)))
 
     fg_intensity_vals = np.concatenate([i_vals for i_vals in fg_intensity_vals])
     
     fg_intensity_metrics =  [np.mean(fg_intensity_vals), np.std(fg_intensity_vals), np.percentile(fg_intensity_vals, 99.5), np.percentile(fg_intensity_vals, 0.5)]
 
     return tuple(median_pixel_spacing), fg_intensity_metrics
+
+if __name__ == '__main__':
+
+    imagesList = sorted(glob.glob('./data/crop_imagesTr/*.nii.gz'))
+    labelsList = sorted(glob.glob('./data/crop_labelsTr/*.nii.gz'))
+
+    median_pix_spacing, fg_intensity_metrics = get_training_metadata(imagesList, labelsList)
+
+    print(median_pix_spacing)
+    print(fg_intensity_metrics)
