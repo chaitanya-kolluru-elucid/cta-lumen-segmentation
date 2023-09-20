@@ -27,7 +27,7 @@ from monai.transforms import (
     CastToTyped
 )
 from monai.handlers.utils import from_engine
-from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE,DynUNet
+from monai.networks.nets import UNet, SegResNet, AttentionUnet, SegResNetVAE,DynUNet, FlexibleUNet
 from monai.networks.layers import Norm
 from monai.metrics import DiceMetric, get_confusion_matrix
 from monai.losses import DiceLoss, DiceCELoss,GeneralizedDiceLoss
@@ -213,6 +213,8 @@ def training_run(args, results_dir):
         kernels, strides = trainer.get_kernels_strides(args.train_roi_size, median_pixel_spacing)
         model = DynUNet(spatial_dims=3, in_channels=1, out_channels=num_classes, kernel_size=kernels, strides=strides, upsample_kernel_size=strides[1:], deep_supervision=True, deep_supr_num=3)
 
+    elif args.architecture == 'FlexibleUNet':
+        model = FlexibleUNet(spatial_dims=3, in_channels=1, out_channels=num_classes, backbone='efficientnet-b0', pretrained=False, decoder_channels=(256, 128, 64, 32, 16))
     else:
         print('Model architecture not found, ensure that the architecture is either UNet, SegResNet, AttentionUnet or DynUNet. Exiting.')
         return
