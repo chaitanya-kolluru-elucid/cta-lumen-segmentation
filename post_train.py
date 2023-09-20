@@ -390,7 +390,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
 
 if __name__ == '__main__':
 
-    pre_train_results_dir = './results/12092023_005708'
+    pre_train_results_dir = './results/17092023_194458'
 
     post_train_images_dir = './data/crop_imagesTr_mlb_in_house_plus_rsip'
     post_train_labels_dir = './data/crop_labelsTr_mlb_in_house_plus_rsip'

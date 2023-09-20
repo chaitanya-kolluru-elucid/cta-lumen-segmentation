@@ -82,7 +82,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
     print('Running inference on ' + str(len(test_images)) + ' cases.')
     with torch.no_grad():
-        for test_data in test_loader:
+        for test_data in tqdm(test_loader):
             test_inputs = test_data["image"].to(device)
             roi_size = training_args.train_roi_size
             sw_batch_size = 4
@@ -116,9 +116,6 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3, co
 
         confusion_matrix_var = np.zeros((num_label_classes, num_label_classes, len(predsList)))
 
-        print('Prediction image list: ')
-        print(predsList)
-
         print('Computing metrics')
 
         for k in tqdm(range(len(predsList))):
@@ -142,6 +139,10 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3, co
 
                 confusion_matrix_var[:,:, k] = confusion_matrix(current_label, current_prediction)
 
+        for k in range(len(predsList)):
+            print('Prediction image name: ', predsList[k].split('/')[-1])
+            print(dice_vals[:,k])
+
         return dice_vals, confusion_matrix_var
 
 # Hausdorff distance
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run inference using a segmentation model for CTA images.')
     parser.add_argument('-test_images_dir', type=str, default='crop_imagesTs_asoca', help='Path to the test images directory.')
     parser.add_argument('-test_labels_dir', type=str, default='crop_labelsTs_asoca', help='Path to the test labels directory.')
-    parser.add_argument('-model_run_datetime', type=str, default='17092023_152632', help='Date time string that is the name of the results folder to use as the model for this inference run.')
+    parser.add_argument('-model_run_datetime', type=str, default='19092023_152348', help='Date time string that is the name of the results folder to use as the model for this inference run.')
     parser.add_argument('-compute_confusion_matrix', type=bool, default=False, help='Flag to compute confusion matrix')
 
     args = parser.parse_args()
@@ -176,11 +177,10 @@ if __name__ == '__main__':
     dice_metric, confusion_matrix_var = calculate_metrics(test_preds_dir= args.test_preds_dir, test_labels_dir = args.test_labels_dir, num_label_classes = num_label_classes, compute_cm = args.compute_confusion_matrix)
 
     # Print dice values
-    print('Dice metric:')
-    print(dice_metric)
-
     print('Mean Dice value across classes:')
     print(np.mean(dice_metric, axis=1))
 
-    print('Overall confusion matrix')
-    print(np.sum(confusion_matrix_var, axis=2))
+    # Print confusion matrix
+    if args.compute_confusion_matrix:
+        print('Overall confusion matrix')
+        print(np.sum(confusion_matrix_var, axis=2))
