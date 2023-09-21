@@ -192,9 +192,10 @@ def training_run(args, results_dir):
     train_ds = PersistentDataset(data=train_files, transform=train_transforms, cache_dir = './cache')
     #train_ds = Dataset(data=train_files, transform=train_transforms)
     #train_ds = CacheDataset(data=train_files, transform=train_transforms)
-    train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
+    #train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_ds = CacheDataset(data=val_files, transform=val_transforms)
-    val_loader = DataLoader(val_ds, batch_size=1, num_workers=0)
+    val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
 
     # Get the GPU device
     device = torch.device("cuda:0")
@@ -245,7 +246,7 @@ def training_run(args, results_dir):
         print('Loss function not found, ensure that the loss is one of DiceCE, Topological or clDice. Exiting.')
         return        
 
-    optimizer = torch.optim.AdamW(model.parameters(), args.lr) 
+    optimizer = torch.optim.Adam(model.parameters(), args.lr) 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
 
     if 'Dice' in args.metrics:
@@ -314,8 +315,6 @@ def training_run(args, results_dir):
                     metric(y_pred=val_outputs, y=val_labels)
 
                     torch.cuda.empty_cache()
-                    del val_outputs, val_labels
-                    gc.collect()
 
                 val_loss /= step
                 val_loss_values.append(val_loss)

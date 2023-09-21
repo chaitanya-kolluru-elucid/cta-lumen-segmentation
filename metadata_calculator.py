@@ -6,7 +6,7 @@ import os
 from tqdm import tqdm
 
 import logging
-logging.basicConfig(filename='metadata_calculator2.log', level=logging.DEBUG)
+logging.basicConfig(filename='metadata_calculator.log', level=logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%Y-%m-%d %H:%M:%S")
 
 def check_orientation(ct_image, ct_arr):
