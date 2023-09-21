@@ -182,7 +182,7 @@ def training_run(args, results_dir):
     check_data = first(check_loader)
     image, label = (check_data["image"][0][0], check_data["label"][0][0])
 
-    nifti_image = nib.Nifti1Image(((image * fg_intensity_metrics[1]) + fg_intensity_metrics[0]).astype(np.uint16) , affine=np.eye(4))
+    nifti_image = nib.Nifti1Image(((image * fg_intensity_metrics[1]) + fg_intensity_metrics[0]).astype(np.int16) , affine=np.eye(4))
     nifti_label = nib.Nifti1Image(label.astype(np.uint16), affine=np.eye(4))
 
     nib.save(nifti_image, os.path.join(results_dir, 'Validation data image check.nii.gz'))
