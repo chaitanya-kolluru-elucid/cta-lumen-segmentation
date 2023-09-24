@@ -200,7 +200,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     # Transforms for the training dataset
     train_transforms = Compose(
         [
-            LoadImaged(keys=["image", "label"]),
+            LoadImaged(keys=["image", "label"], image_only=False),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
                 keys=["image"],
@@ -230,7 +230,7 @@ def post_training_run(post_train_images_dir, post_train_labels_dir, pre_train_re
     )
     val_transforms = Compose(
         [
-            LoadImaged(keys=["image", "label"]),
+            LoadImaged(keys=["image", "label"], image_only=False),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
                 keys=["image"],
