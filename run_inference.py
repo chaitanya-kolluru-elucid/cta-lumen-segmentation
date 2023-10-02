@@ -4,7 +4,9 @@ import os
 import glob
 import pickle
 
-from monai.transforms import Compose, LoadImaged, EnsureChannelFirstd, ScaleIntensityRanged, NormalizeIntensityd, Orientationd, Spacingd, Invertd
+from monai.transforms import (Compose, LoadImaged, EnsureChannelFirstd, \
+                              ScaleIntensityRanged, NormalizeIntensityd, \
+                              Orientationd, Spacingd, Invertd)
 from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch
 import nibabel as nib
 from monai.inferers import sliding_window_inference
@@ -144,9 +146,6 @@ def calculate_metrics(test_preds_dir, test_labels_dir, num_label_classes = 3, co
             print(dice_vals[:,k])
 
         return dice_vals, confusion_matrix_var
-
-# Hausdorff distance
-# hd += compute_hausdorff_distance(y_pred = val_outputs[0], y = val_labels[0], include_background=False, distance_metric='euclidean', spacing=[0.40519333, 0.40519333, 0.625])
 
 if __name__ == '__main__':
 

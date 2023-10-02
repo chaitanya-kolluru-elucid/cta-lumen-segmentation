@@ -128,17 +128,17 @@ def training_run(args, results_dir):
             LoadImaged(keys=["image", "label"]),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
-                keys=["image"],
-                a_min=fg_intensity_metrics[3],
-                a_max=fg_intensity_metrics[2],
-                b_min=fg_intensity_metrics[3],
-                b_max=fg_intensity_metrics[2],
-                clip=True,
+                 keys=["image"],
+                a_min=-410,
+                a_max=590,
+                b_min=-410,
+                b_max=590,
+                 clip=True,
             ),
             NormalizeIntensityd(
                 keys=["image"],
-                subtrahend = fg_intensity_metrics[0],
-                divisor = fg_intensity_metrics[1],
+                # subtrahend = fg_intensity_metrics[0],
+                # divisor = fg_intensity_metrics[1],
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
@@ -158,17 +158,17 @@ def training_run(args, results_dir):
             LoadImaged(keys=["image", "label"]),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
-                keys=["image"],
-                a_min=fg_intensity_metrics[3],
-                a_max=fg_intensity_metrics[2],
-                b_min=fg_intensity_metrics[3],
-                b_max=fg_intensity_metrics[2],
-                clip=True,
+                 keys=["image"],
+                a_min=-410,
+                a_max=590,
+                b_min=-410,
+                b_max=590,
+                 clip=True,
             ),
             NormalizeIntensityd(
                 keys=["image"],
-                subtrahend = fg_intensity_metrics[0],
-                divisor = fg_intensity_metrics[1],
+                # subtrahend = fg_intensity_metrics[0],
+                # divisor = fg_intensity_metrics[1],
             ),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"], pixdim=median_pixel_spacing, mode=("bilinear", "nearest")),
@@ -193,7 +193,7 @@ def training_run(args, results_dir):
     #train_ds = Dataset(data=train_files, transform=train_transforms)
     #train_ds = CacheDataset(data=train_files, transform=train_transforms)
     #train_loader = ThreadDataLoader(train_ds, batch_size=args.batch_size, num_workers=0)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
     val_ds = CacheDataset(data=val_files, transform=val_transforms)
     val_loader = DataLoader(val_ds, batch_size=1, num_workers=4)
 
