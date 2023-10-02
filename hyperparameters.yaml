@@ -1,0 +1,60 @@
+wandb_team: image-processing
+wandb_project: lumen-segmentation
+github_repo: https://github.com/chaitanya-kolluru-elucid/cta-lumen-segmentation.git
+data_dir: ./data
+metadata_dir: ./metadata
+results_dir: ./results
+
+use_previous_run: False
+previous_run_datetime: None
+
+generic_params:
+      architecture: UNet
+      num_classes: 3
+      roi_size: [96, 96, 96]
+      target_pixel_spacing: median_pixel_spacing.pkl
+
+pre_train:
+      run: True
+      epochs: 5
+      val_interval: 2
+      batch_size: 4
+      learning_rate: 0.001
+      val_ratio: 0.2
+      loss: DiceCE
+      metrics: Dice
+      mask_suffix: lumen-wall-mask
+      crop_ratios: [0, 2, 2]
+      ce_weights: [1, 1, 1]
+      include_bg_in_loss: True
+      include_bg_in_metric: False
+      dice_batch_reduction: False
+      images_data_dir: slb_images
+      labels_data_dir: slb_labels
+
+train:
+      run: True
+      epochs: 5
+      val_interval: 2
+      batch_size: 4
+      learning_rate: 0.001
+      val_ratio: 0.2
+      loss: DiceCE
+      metrics: Dice
+      mask_suffix: lumen-wall-mask
+      crop_ratios: [2, 2, 2]
+      ce_weights: [1, 1, 1]
+      include_bg_in_loss: True
+      include_bg_in_metric: False
+      dice_batch_reduction: True
+      images_data_dir: mlb_images
+      labels_data_dir: mlb_labels
+      architecture: UNet
+      use_pre_training_weights: True
+
+inference:
+      run: True
+      images_data_dir: asoca_images
+      labels_data_dir: asoca_labels
+      val_ratio: 0
+      batch_size: 1

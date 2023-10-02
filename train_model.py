@@ -125,7 +125,7 @@ def training_run(args, results_dir):
     # Transforms for the training dataset
     train_transforms = Compose(
         [
-            LoadImaged(keys=["image", "label"]),
+            LoadImaged(keys=["image", "label"], image_only=False),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
                  keys=["image"],
@@ -155,7 +155,7 @@ def training_run(args, results_dir):
     )
     val_transforms = Compose(
         [
-            LoadImaged(keys=["image", "label"]),
+            LoadImaged(keys=["image", "label"], image_only=False),
             EnsureChannelFirstd(keys=["image", "label"]),
             ScaleIntensityRanged(
                  keys=["image"],

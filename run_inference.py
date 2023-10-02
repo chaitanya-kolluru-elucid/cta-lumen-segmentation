@@ -14,6 +14,7 @@ from scipy.spatial.distance import dice
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from tqdm import tqdm
+import SimpleITK as sitk
 
 def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
@@ -44,7 +45,7 @@ def run_inference(results_dir, test_images_dir, test_preds_dir, training_args):
 
     test_transforms = Compose(
         [
-            LoadImaged(keys=["image"]),
+            LoadImaged(keys=["image"], image_only=False),
             EnsureChannelFirstd(keys=["image"]),
             ScaleIntensityRanged(
                 keys=["image"],
